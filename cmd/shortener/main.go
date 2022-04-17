@@ -19,7 +19,7 @@ func Middleware(next http.Handler) http.Handler {
 
 func main() {
 
-	repo := repository.NewUrlRepo()
+	repo := repository.NewURLRepo()
 
 	generator := util.GenFunc(util.Generate)
 	service := domain.NewShortener(&generator)

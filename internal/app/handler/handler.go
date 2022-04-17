@@ -11,10 +11,10 @@ import (
 
 type AppHandler struct {
 	shortener *domain.Shortener
-	repo      *repository.UrlRepo
+	repo      *repository.URLRepo
 }
 
-func NewAppHandler(shortener *domain.Shortener, repo *repository.UrlRepo) *AppHandler {
+func NewAppHandler(shortener *domain.Shortener, repo *repository.URLRepo) *AppHandler {
 	return &AppHandler{
 		shortener: shortener,
 		repo:      repo,

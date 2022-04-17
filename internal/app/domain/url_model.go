@@ -1,13 +1,13 @@
 package domain
 
-// Url model represents an url as structure
-type Url struct {
+// URL model represents an url as structure
+type URL struct {
 	Orig  string
 	Short string
 }
 
-func NewUrl(original, short string) *Url {
-	return &Url{
+func NewURL(original, short string) *URL {
+	return &URL{
 		Orig:  original,
 		Short: short,
 	}

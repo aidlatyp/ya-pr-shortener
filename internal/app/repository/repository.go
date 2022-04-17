@@ -6,31 +6,31 @@ import (
 	"sync"
 )
 
-type UrlRepo struct {
+type URLRepo struct {
 	storage map[string]string
 	mutex   sync.RWMutex
 }
 
-func NewUrlRepo() *UrlRepo {
-	return &UrlRepo{
+func NewURLRepo() *URLRepo {
+	return &URLRepo{
 		storage: make(map[string]string),
 	}
 }
 
-func (u *UrlRepo) Store(url *domain.Url) error {
+func (u *URLRepo) Store(url *domain.URL) error {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
 	u.storage[(*url).Short] = (*url).Orig
 	return nil
 }
 
-func (u *UrlRepo) FindByKey(key string) (*domain.Url, error) {
+func (u *URLRepo) FindByKey(key string) (*domain.URL, error) {
 	u.mutex.RLock()
 	defer u.mutex.RUnlock()
 	orig, ok := u.storage[key]
 	if !ok {
 		return nil, errors.New("key does not exist")
 	}
-	url := domain.NewUrl(orig, key)
+	url := domain.NewURL(orig, key)
 	return url, nil
 }

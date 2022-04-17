@@ -4,11 +4,11 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 )
 
-const shortenedUrlLen = config.ShortenedUrlLen
+const ShortenedURLLen = config.ShortenedURLLen
 
 // Shorten restricts the generator return type
 // by exact shortenedUrlLen number of elements
-type Shorten [shortenedUrlLen]byte
+type Shorten [ShortenedURLLen]byte
 
 // Generator is an interface used by Shortener to create a random strings
 // and do not depend on concrete random generation algorithm
@@ -27,9 +27,9 @@ func NewShortener(generator Generator) *Shortener {
 	}
 }
 
-func (s *Shortener) MakeShort(inputUrl string) *Url {
+func (s *Shortener) MakeShort(inputURL string) *URL {
 	short := s.Generate()
 	str := string(short[:])
-	u := NewUrl(inputUrl, str)
+	u := NewURL(inputURL, str)
 	return u
 }
