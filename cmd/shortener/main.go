@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-func Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		// do something
-		next.ServeHTTP(writer, request)
-	})
-}
+//func Middleware(next http.Handler) http.Handler {
+//	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+//		// do something
+//		next.ServeHTTP(writer, request)
+//	})
+//}
 
 func main() {
 
@@ -31,7 +31,7 @@ func main() {
 
 	server := http.Server{
 		Addr:              config.ServerAddr,
-		Handler:           Middleware(mux),
+		Handler:           mux, //Middleware(mux),
 		ReadHeaderTimeout: config.ServerTimeout * time.Second,
 		ReadTimeout:       config.ServerTimeout * time.Second,
 		WriteTimeout:      config.ServerTimeout * time.Second,
