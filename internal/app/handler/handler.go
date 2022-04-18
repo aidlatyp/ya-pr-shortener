@@ -37,11 +37,6 @@ func (a *AppHandler) HandleMain() http.HandlerFunc {
 
 func (a *AppHandler) handleMainGet(writer http.ResponseWriter, request *http.Request) {
 
-	log.Println("path->", request.RequestURI)
-	log.Println("path->", request.URL.Path)
-	log.Println("url->", request.Proto)
-	log.Println("query->", request.URL.Query())
-
 	urlTokens := strings.Split(request.URL.Path, "/")
 	if len(urlTokens) == 2 && urlTokens[1] != "" {
 
@@ -57,27 +52,11 @@ func (a *AppHandler) handleMainGet(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	id := request.URL.Query().Get("id")
-	if id != "" {
-
-		log.Println(id)
-
-		url, err := a.repo.FindByKey(id)
-		if err != nil {
-			writer.WriteHeader(400)
-			writer.Write([]byte(err.Error()))
-			return
-		}
-		//fmt.Println(url.Orig)
-		writer.Header().Set("Location", url.Orig)
-		writer.WriteHeader(307)
-		return
-	}
-
 	writer.WriteHeader(400)
 }
 
 func (a *AppHandler) handleMainPost(writer http.ResponseWriter, request *http.Request) {
+
 	if request.URL.Path == "/" {
 		url, err := io.ReadAll(request.Body)
 		if err != nil || len(url) < len("xx.xx") {
@@ -92,7 +71,7 @@ func (a *AppHandler) handleMainPost(writer http.ResponseWriter, request *http.Re
 			return
 		}
 		writer.WriteHeader(201)
-		writer.Write([]byte(u.Short))
+		writer.Write([]byte("http://localhost:8080/" + u.Short))
 		return
 	}
 	writer.WriteHeader(400)
