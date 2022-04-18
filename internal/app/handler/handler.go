@@ -46,7 +46,6 @@ func (a *AppHandler) handleMainGet(writer http.ResponseWriter, request *http.Req
 			writer.Write([]byte(err.Error()))
 			return
 		}
-		//fmt.Println(url.Orig)
 		writer.Header().Set("Location", url.Orig)
 		writer.WriteHeader(307)
 		return
