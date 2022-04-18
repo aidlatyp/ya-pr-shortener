@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strings"
 )
 
 type AppHandler struct {
@@ -36,20 +35,24 @@ func (a *AppHandler) HandleMain() http.HandlerFunc {
 
 func (a *AppHandler) handleMainGet(writer http.ResponseWriter, request *http.Request) {
 
-	urlTokens := strings.Split(request.URL.Path, "/")
-	if len(urlTokens) == 2 && urlTokens[1] != "" {
+	param := request.URL.Query().Get("id")
+	//urlTokens := strings.Split(request.URL.Path, "/")
+	//if len(urlTokens) == 2 && urlTokens[1] != "" {
 
-		url, err := a.repo.FindByKey(urlTokens[1])
-		if err != nil {
-			writer.WriteHeader(400)
-			writer.Write([]byte(err.Error()))
-			return
-		}
-		writer.Header().Set("Location", url.Orig)
-		writer.WriteHeader(307)
+	//url, err := a.repo.FindByKey(urlTokens[1])
+	url, err := a.repo.FindByKey(param)
+	if err != nil {
+		writer.WriteHeader(400)
+		writer.Write([]byte(err.Error()))
 		return
 	}
-	writer.WriteHeader(400)
+	//fmt.Println(url.Orig)
+	writer.Header().Set("Location", url.Orig)
+	writer.WriteHeader(307)
+	return
+	//}
+
+	//	writer.WriteHeader(400)
 }
 
 func (a *AppHandler) handleMainPost(writer http.ResponseWriter, request *http.Request) {
