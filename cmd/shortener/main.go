@@ -18,19 +18,18 @@ func main() {
 	gen := util.GetGenerator()
 	shortener := domain.NewShortener(gen)
 
-	// Storage (Data Provider)
+	// Data Provider
 	store := storage.NewURLStorage()
 
 	// Usecase
 	uc := usecase.NewShorten(shortener, store)
 
-	// Main application handler
-	appHandler := handler.NewAppRouter(uc)
+	// Router
+	appRouter := handler.NewAppRouter(uc)
 
-	// Server
 	server := http.Server{
 		Addr:              config.ServerAddr,
-		Handler:           appHandler,
+		Handler:           appRouter,
 		ReadHeaderTimeout: config.ServerTimeout * time.Second,
 		ReadTimeout:       config.ServerTimeout * time.Second,
 		WriteTimeout:      config.ServerTimeout * time.Second,
