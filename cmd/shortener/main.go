@@ -7,39 +7,34 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
+	"log"
 	"net/http"
 	"time"
 )
 
-func Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		// do something
-		next.ServeHTTP(writer, request)
-	})
-}
-
 func main() {
 
+	// Domain
+	gen := util.GetGenerator()
+	shortener := domain.NewShortener(gen)
+
+	// Storage (Data Provider)
 	store := storage.NewURLStorage()
 
-	gen := util.GenFunc(util.Generate)
-	service := domain.NewShortener(&gen)
+	// Usecase
+	uc := usecase.NewShorten(shortener, store)
 
-	uc := usecase.NewShorten(service, store)
+	// Main application handler
+	appHandler := handler.NewAppRouter(uc)
 
-	appHandler := handler.NewAppHandler(uc)
-
-	mux := http.NewServeMux()
-	mux.Handle("/", appHandler.HandleMain())
-
+	// Server
 	server := http.Server{
 		Addr:              config.ServerAddr,
-		Handler:           Middleware(mux),
+		Handler:           appHandler,
 		ReadHeaderTimeout: config.ServerTimeout * time.Second,
 		ReadTimeout:       config.ServerTimeout * time.Second,
 		WriteTimeout:      config.ServerTimeout * time.Second,
 	}
-
-	server.ListenAndServe()
-
+	err := server.ListenAndServe()
+	log.Printf("server finished with: %v", err)
 }

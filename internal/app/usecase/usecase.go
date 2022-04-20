@@ -31,6 +31,7 @@ func (s *Shorten) Shorten(url string) string {
 	short := s.shortener.MakeShort(url)
 	err := s.repo.Store(short)
 	if err != nil {
+		// process an error in the future
 		log.Println(err.Error())
 	}
 	return short.Short
