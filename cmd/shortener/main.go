@@ -3,7 +3,8 @@ package main
 import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/handler"
-	"github.com/aidlatyp/ya-pr-shortener/internal/app/repository"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/storage"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
 	"net/http"
@@ -19,12 +20,14 @@ func Middleware(next http.Handler) http.Handler {
 
 func main() {
 
-	repo := repository.NewURLRepo()
+	store := storage.NewURLStorage()
 
-	generator := util.GenFunc(util.Generate)
-	service := domain.NewShortener(&generator)
+	gen := util.GenFunc(util.Generate)
+	service := domain.NewShortener(&gen)
 
-	appHandler := handler.NewAppHandler(service, repo)
+	uc := usecase.NewShorten(service, store)
+
+	appHandler := handler.NewAppHandler(uc)
 
 	mux := http.NewServeMux()
 	mux.Handle("/", appHandler.HandleMain())
