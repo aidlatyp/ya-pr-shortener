@@ -1,4 +1,4 @@
-package repository
+package storage
 
 import (
 	"errors"
@@ -6,25 +6,25 @@ import (
 	"sync"
 )
 
-type URLRepo struct {
+type URLStorage struct {
 	storage map[string]string
 	mutex   sync.RWMutex
 }
 
-func NewURLRepo() *URLRepo {
-	return &URLRepo{
+func NewURLStorage() *URLStorage {
+	return &URLStorage{
 		storage: make(map[string]string),
 	}
 }
 
-func (u *URLRepo) Store(url *domain.URL) error {
+func (u *URLStorage) Store(url *domain.URL) error {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
 	u.storage[(*url).Short] = (*url).Orig
 	return nil
 }
 
-func (u *URLRepo) FindByKey(key string) (*domain.URL, error) {
+func (u *URLStorage) FindByKey(key string) (*domain.URL, error) {
 	u.mutex.RLock()
 	defer u.mutex.RUnlock()
 	orig, ok := u.storage[key]
