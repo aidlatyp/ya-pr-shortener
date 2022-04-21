@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -13,17 +12,14 @@ import (
 )
 
 type usecaseMock struct {
-	s string
-	o string
-	e bool
+	s string // short
+	o string // orig
+	e bool   // err
 }
 
-func (u *usecaseMock) Shorten(_ string) string {
-	return u.s
-}
+func (u *usecaseMock) Shorten(_ string) string { return u.s }
 func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 	if u.e {
-		fmt.Println("error zz")
 		return "", errors.New("usecase error")
 	}
 	return u.o, nil
@@ -32,21 +28,20 @@ func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 func TestAppHandler_HandleMain(t *testing.T) {
 	t.Run("Test Handler", func(t *testing.T) {
 
-		// POST
-		body := bytes.NewBufferString("http://example.com")
-		request := httptest.NewRequest(http.MethodPost, "/", body)
-
-		w := httptest.NewRecorder()
-
+		// Prepare fake usecase
 		uc := &usecaseMock{
 			s: "xyz",
 			o: "http://example.com",
 			e: false,
 		}
+		// Main App router
+		h := NewAppRouter(uc)
 
-		appHandler := NewAppHandler(uc)
-		h := appHandler.HandleMain()
+		// POST request
+		body := bytes.NewBufferString("http://example.com")
+		request := httptest.NewRequest(http.MethodPost, "/", body)
 
+		w := httptest.NewRecorder()
 		h.ServeHTTP(w, request)
 		response := w.Result()
 
@@ -61,7 +56,7 @@ func TestAppHandler_HandleMain(t *testing.T) {
 		err = response.Body.Close()
 		require.NoError(t, err)
 
-		// GET
+		// GET request
 		request = httptest.NewRequest(http.MethodGet, "/xyz", nil)
 		w = httptest.NewRecorder()
 
@@ -74,11 +69,11 @@ func TestAppHandler_HandleMain(t *testing.T) {
 		err = response.Body.Close()
 		require.NoError(t, err)
 
-		// Not found
+		// GET Not found
 		request = httptest.NewRequest(http.MethodGet, "/abc", nil)
 		w = httptest.NewRecorder()
 
-		uc.e = true
+		uc.e = true // Make usecase to return an error
 
 		h.ServeHTTP(w, request)
 		response = w.Result()
