@@ -102,8 +102,8 @@ func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
 
 		// OK
 		// Prepare request json
-		requestJson := "{ \"url\" : \"http://example.com\"}"
-		body := bytes.NewBufferString(requestJson)
+		requestJSON := "{ \"url\" : \"http://example.com\"}"
+		body := bytes.NewBufferString(requestJSON)
 		request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 
 		w := httptest.NewRecorder()
@@ -123,8 +123,8 @@ func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
 
 		// Error - Invalid Json
 		// Prepare bad json
-		requestBadJson := "{ \"url\" : http://example.com\"}"
-		body = bytes.NewBufferString(requestBadJson)
+		requestBadJSON := "{ \"url\" : http://example.com\"}"
+		body = bytes.NewBufferString(requestBadJSON)
 		request = httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 
 		w = httptest.NewRecorder()
@@ -137,8 +137,8 @@ func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
 		require.NoError(t, err)
 
 		// Error - wrong json
-		requestWrongJson := "{ \"urlBad\" : http://example.com\"}"
-		body = bytes.NewBufferString(requestWrongJson)
+		requestWrongJSON := "{ \"urlBad\" : http://example.com\"}"
+		body = bytes.NewBufferString(requestWrongJSON)
 		request = httptest.NewRequest(http.MethodPost, "/api/shorten", body)
 
 		w = httptest.NewRecorder()
