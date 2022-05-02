@@ -3,12 +3,13 @@ package handler
 import (
 	"bytes"
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type usecaseMock struct {
@@ -79,6 +80,72 @@ func TestAppHandler_HandleMain(t *testing.T) {
 		response = w.Result()
 
 		assert.Equal(t, 404, response.StatusCode)
+
+		err = response.Body.Close()
+		require.NoError(t, err)
+
+	})
+}
+
+func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
+	t.Run("Test Handler API Json ShortURL", func(t *testing.T) {
+
+		// Prepare fake usecase
+		uc := &usecaseMock{
+			s: "xyz",
+			o: "http://example.com",
+			e: false,
+		}
+
+		// Main App router
+		h := NewAppRouter(uc)
+
+		// OK
+		// Prepare request json
+		requestJSON := "{ \"url\" : \"http://example.com\"}"
+		body := bytes.NewBufferString(requestJSON)
+		request := httptest.NewRequest(http.MethodPost, "/api/shorten", body)
+
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, request)
+		response := w.Result()
+
+		assert.Equal(t, 201, response.StatusCode)
+		assert.Equal(t, "application/json", response.Header.Get("Content-Type"))
+
+		content, err := ioutil.ReadAll(response.Body)
+		require.NoError(t, err)
+
+		assert.Equal(t, "{\"result\":\"http://localhost:8080/xyz\"}", string(content))
+
+		err = response.Body.Close()
+		require.NoError(t, err)
+
+		// Error - Invalid Json
+		// Prepare bad json
+		requestBadJSON := "{ \"url\" : http://example.com\"}"
+		body = bytes.NewBufferString(requestBadJSON)
+		request = httptest.NewRequest(http.MethodPost, "/api/shorten", body)
+
+		w = httptest.NewRecorder()
+		h.ServeHTTP(w, request)
+
+		response = w.Result()
+		assert.Equal(t, 400, response.StatusCode)
+
+		err = response.Body.Close()
+		require.NoError(t, err)
+
+		// Error - wrong json
+		requestWrongJSON := "{ \"urlBad\" : http://example.com\"}"
+		body = bytes.NewBufferString(requestWrongJSON)
+		request = httptest.NewRequest(http.MethodPost, "/api/shorten", body)
+
+		w = httptest.NewRecorder()
+		h.ServeHTTP(w, request)
+
+		response = w.Result()
+		assert.Equal(t, 400, response.StatusCode)
 
 		err = response.Body.Close()
 		require.NoError(t, err)
