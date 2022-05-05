@@ -41,7 +41,7 @@ func main() {
 	uc := usecase.NewShorten(shortener, store)
 
 	// Router
-	bu := appConf.BaseURL
+	bu := appConf.BaseURL + "/"
 	appRouter := handler.NewAppRouter(bu, uc)
 
 	server := http.Server{
