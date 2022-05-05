@@ -29,7 +29,7 @@ func main() {
 	log.Println("port is - >", serverConf.ServerPort)
 
 	if serverConf.ServerAddr == "" {
-		serverConf.ServerAddr = "8080"
+		serverConf.ServerAddr = ":8080"
 	}
 
 	err = env.Parse(&appConf)
