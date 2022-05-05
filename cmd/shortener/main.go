@@ -24,12 +24,12 @@ func main() {
 		log.Fatalf("can't load server config")
 	}
 
-	log.Println("addr is - >", serverConf.ServerAddr)
-	log.Println("host is - >", serverConf.ServerHost)
-	log.Println("port is - >", serverConf.ServerPort)
-
 	if serverConf.ServerAddr == "" {
 		serverConf.ServerAddr = ":8080"
+	}
+
+	if appConf.BaseURL == "" {
+		appConf.BaseURL = "http://localhost" + serverConf.ServerAddr
 	}
 
 	err = env.Parse(&appConf)
@@ -54,7 +54,7 @@ func main() {
 	appRouter := handler.NewAppRouter(bu, uc)
 
 	server := http.Server{
-		Addr:    "127.0.0.1" + serverConf.ServerAddr,
+		Addr:    serverConf.ServerAddr,
 		Handler: appRouter,
 		//ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
 		//ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
