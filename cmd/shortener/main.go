@@ -45,7 +45,7 @@ func main() {
 	appRouter := handler.NewAppRouter(bu, uc)
 
 	server := http.Server{
-		Addr:              serverConf.ServerAddr,
+		Addr:              "localhost" + serverConf.ServerAddr,
 		Handler:           appRouter,
 		ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
 		ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
