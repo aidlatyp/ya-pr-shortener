@@ -30,6 +30,8 @@ func main() {
 		log.Printf("can't load application config")
 	}
 
+	serverConf.ServerTimeout = 30
+
 	// Domain
 	gen := util.GetGenerator()
 	shortener := domain.NewShortener(gen)
@@ -45,7 +47,7 @@ func main() {
 	appRouter := handler.NewAppRouter(bu, uc)
 
 	server := http.Server{
-		Addr:              "localhost" + serverConf.ServerAddr,
+		Addr:              "127.0.0.1" + serverConf.ServerAddr,
 		Handler:           appRouter,
 		ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
 		ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
