@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/handler"
@@ -23,6 +22,14 @@ func main() {
 	err := env.Parse(&serverConf)
 	if err != nil {
 		log.Fatalf("can't load server config")
+	}
+
+	log.Println("addr is - >", serverConf.ServerAddr)
+	log.Println("host is - >", serverConf.ServerHost)
+	log.Println("port is - >", serverConf.ServerPort)
+
+	if serverConf.ServerAddr == "" {
+		serverConf.ServerAddr = "8080"
 	}
 
 	err = env.Parse(&appConf)
@@ -47,11 +54,11 @@ func main() {
 	appRouter := handler.NewAppRouter(bu, uc)
 
 	server := http.Server{
-		Addr:              "127.0.0.1" + serverConf.ServerAddr,
-		Handler:           appRouter,
-		ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
-		ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
-		WriteTimeout:      time.Duration(serverConf.ServerTimeout) * time.Second,
+		Addr:    "127.0.0.1" + serverConf.ServerAddr,
+		Handler: appRouter,
+		//ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
+		//ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
+		//WriteTimeout:      time.Duration(serverConf.ServerTimeout) * time.Second,
 	}
 
 	err = server.ListenAndServe()
