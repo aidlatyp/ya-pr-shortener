@@ -10,5 +10,6 @@ type Server struct {
 }
 
 type App struct {
-	BaseURL string `env:"BASE_URL"`
+	BaseURL  string `env:"BASE_URL"`
+	FilePath string `env:"FILE_STORAGE_PATH"`
 }
