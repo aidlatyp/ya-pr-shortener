@@ -14,9 +14,10 @@ import (
 type AppRouter struct {
 	usecase usecase.InputPort
 	*chi.Mux
+	baseURL string
 }
 
-func NewAppRouter(usecase usecase.InputPort) *AppRouter {
+func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 
 	// Root router
 	rootRouter := chi.NewRouter()
@@ -29,10 +30,10 @@ func NewAppRouter(usecase usecase.InputPort) *AppRouter {
 	appRouter := AppRouter{
 		usecase: usecase,
 		Mux:     rootRouter,
+		baseURL: baseURL,
 	}
 
 	appRouter.apiRouter()
-	// other sub routers..
 
 	return &appRouter
 }
@@ -75,7 +76,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		id := a.usecase.Shorten(origURL)
 
 		output := map[string]string{
-			"result": "http://localhost:8080/" + id,
+			"result": a.baseURL + id,
 		}
 
 		marshalled, err := json.Marshal(output)
@@ -122,7 +123,7 @@ func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request
 
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(201)
-	_, err = writer.Write([]byte("http://localhost:8080/" + id))
+	_, err = writer.Write([]byte(a.baseURL + id))
 	if err != nil {
 		log.Printf("error while writing answer: %v", err)
 	}

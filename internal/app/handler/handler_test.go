@@ -36,7 +36,7 @@ func TestAppHandler_HandleMain(t *testing.T) {
 			e: false,
 		}
 		// Main App router
-		h := NewAppRouter(uc)
+		h := NewAppRouter("http://localhost:8080/", uc)
 
 		// POST request
 		body := bytes.NewBufferString("http://example.com")
@@ -98,7 +98,7 @@ func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
 		}
 
 		// Main App router
-		h := NewAppRouter(uc)
+		h := NewAppRouter("http://localhost:8080/", uc)
 
 		// OK
 		// Prepare request json
