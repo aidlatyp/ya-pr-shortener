@@ -11,52 +11,35 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
-	"github.com/caarlos0/env/v6"
 )
+
+var serverConf config.ServerConf
+var appConf config.App
+
+func init() {
+	flags := config.NewParsedFlags()
+	serverConf = config.NewServerConf(flags)
+	appConf = config.NewAppConf(flags, serverConf)
+}
 
 func main() {
 
-	// Configure server
-	var serverConf config.Server
-	err := env.Parse(&serverConf)
-	if err != nil {
-		log.Fatalf("can't load server config")
-	}
-	if serverConf.ServerAddr == "" {
-		serverConf.ServerAddr = ":8080"
-	}
-
-	// Configure application
-	var appConf config.App
-	err = env.Parse(&appConf)
-	if err != nil {
-		log.Printf("can't load application config")
-	}
-	if appConf.BaseURL == "" {
-		appConf.BaseURL = "http://localhost" + serverConf.ServerAddr
-	}
-
-	// Choose storage
 	var store usecase.Repository
-
 	// In memory data provider
 	if appConf.FilePath == "" {
 		store = storage.NewURLMemoryStorage()
 		log.Println("no filename, fallback to in memory")
-
 	} else {
-
+		// Persistent data provider
 		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath)
 		if err != nil {
 			log.Fatalf("cant start corrupted url file %v ", err.Error())
 		}
-
 		defer func() {
 			if err := persistentStorage.Close(); err != nil {
 				log.Printf("error while closing file,  not closed with %v", err)
 			}
 		}()
-
 		store = persistentStorage
 	}
 
@@ -80,7 +63,8 @@ func main() {
 		WriteTimeout:      time.Duration(serverConf.ServerTimeout) * time.Second,
 	}
 
-	err = server.ListenAndServe()
-	log.Printf("server finished with: %v", err)
+	log.Printf("server starting at %v", serverConf.ServerAddr)
 
+	err := server.ListenAndServe()
+	log.Printf("server finished with: %v", err)
 }
