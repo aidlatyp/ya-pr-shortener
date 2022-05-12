@@ -26,7 +26,6 @@ func NewPersistentStorage(path string) (*PersistentStorage, error) {
 	cache := NewURLMemoryStorage()
 	sc := bufio.NewScanner(file)
 
-	// fill cache
 	for sc.Scan() {
 
 		var url *domain.URL

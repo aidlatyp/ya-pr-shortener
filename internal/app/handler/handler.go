@@ -78,7 +78,6 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		output := map[string]string{
 			"result": a.baseURL + id,
 		}
-
 		marshalled, err := json.Marshal(output)
 		if err != nil {
 			writer.WriteHeader(500)
@@ -99,6 +98,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 }
 
 func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request) {
+
 	id := chi.URLParam(request, "id")
 
 	response, err := a.usecase.RestoreOrigin(id)
