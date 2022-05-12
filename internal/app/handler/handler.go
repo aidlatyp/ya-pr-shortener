@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -24,7 +25,7 @@ func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 
 	// Middlewares
 	rootRouter.Use(middleware.Recoverer)
-	rootRouter.Use(CustomMiddleware(struct{}{}))
+	rootRouter.Use(CompressMiddleware(struct{}{}))
 
 	// configure application router
 	appRouter := AppRouter{
@@ -58,8 +59,12 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 // Handlers
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
+	fmt.Println("HANDLER REQUEST ")
+
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
+		fmt.Println("READ ALL ERROR ")
+		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -67,6 +72,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
+		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
