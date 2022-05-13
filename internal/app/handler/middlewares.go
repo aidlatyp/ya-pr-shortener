@@ -26,19 +26,19 @@ type gzipResponseWriter struct {
 func (w gzipResponseWriter) Write(b []byte) (int, error) {
 
 	if _, ok := compressible[w.Header().Get("Content-Type")]; ok {
-		w.Header().Del("Content-Length")
 		return w.gz.Write(b)
 	}
 
 	return w.ResponseWriter.Write(b)
 }
 
-func CompressMiddleware(_ interface{}) func(http.Handler) http.Handler {
+func CompressMiddleware() func(http.Handler) http.Handler {
 	gzWriter := gzip.NewWriter(nil)
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 
-			// gzipped request, try to process
+			// compressed Request
+			// need to unzip
 			var req http.Request
 			if request.Header.Get(`Content-Encoding`) == "gzip" {
 				req = *request
@@ -51,6 +51,7 @@ func CompressMiddleware(_ interface{}) func(http.Handler) http.Handler {
 				defer gzReader.Close()
 			}
 
+			// compress Response
 			// now check if client is able to receive compressed content
 			if !strings.Contains(request.Header.Get("Accept-Encoding"), "gzip") {
 				next.ServeHTTP(writer, request)
@@ -67,7 +68,6 @@ func CompressMiddleware(_ interface{}) func(http.Handler) http.Handler {
 			}
 
 			next.ServeHTTP(gzw, request)
-
 		})
 	}
 }

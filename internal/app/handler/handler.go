@@ -12,6 +12,8 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
+const minURLlen = 4
+
 type AppRouter struct {
 	usecase usecase.InputPort
 	*chi.Mux
@@ -25,7 +27,7 @@ func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 
 	// Middlewares
 	rootRouter.Use(middleware.Recoverer)
-	rootRouter.Use(CompressMiddleware(struct{}{}))
+	rootRouter.Use(CompressMiddleware())
 
 	// configure application router
 	appRouter := AppRouter{
@@ -120,7 +122,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
 	input, err := io.ReadAll(request.Body)
-	if err != nil || len(input) < len("xx.xx") {
+	if err != nil || len(input) < minURLlen {
 		writer.WriteHeader(400)
 		return
 	}

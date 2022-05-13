@@ -7,23 +7,23 @@ import (
 	"os"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 )
 
 const LineBreak byte = '\n'
 
 type PersistentStorage struct {
-	cache *URLMemoryStorage
+	cache usecase.Repository
 	file  *os.File
 }
 
-func NewPersistentStorage(path string) (*PersistentStorage, error) {
+func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	cache := NewURLMemoryStorage()
 	sc := bufio.NewScanner(file)
 
 	for sc.Scan() {
@@ -60,9 +60,8 @@ func (p *PersistentStorage) Store(url *domain.URL) error {
 	if err != nil {
 		return err
 	}
-
-	p.cache.Store(url)
-	return nil
+	err = p.cache.Store(url)
+	return err
 }
 
 func (p *PersistentStorage) FindByKey(key string) (*domain.URL, error) {

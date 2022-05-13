@@ -1,71 +1,52 @@
 package config
 
 import (
+	"log"
+
 	"github.com/caarlos0/env/v6"
-	"github.com/spf13/pflag"
 )
 
+// ShortenedURLLen configure "main functionality"
 const ShortenedURLLen int = 5
 
-type ParsedFlags struct {
-	addr     *string
-	baseURL  *string
-	fileName *string
-}
-
-func (p *ParsedFlags) Addr() string {
-	return *p.addr
-}
-
-func (p *ParsedFlags) BaseURL() string {
-	return *p.baseURL
-}
-
-func (p *ParsedFlags) Filename() string {
-	return *p.fileName
-}
-
-func NewParsedFlags() ParsedFlags {
-	parsed := ParsedFlags{}
-	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
-	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")
-	parsed.fileName = pflag.StringP("f", "f", "", "Filename to store URLs")
-	pflag.Parse()
-	return parsed
-}
-
-type ServerConf struct {
-	ServerTimeout int64  `env:"SERVER_TIMEOUT"`
-	ServerAddr    string `env:"SERVER_ADDRESS"`
-}
-
-func NewServerConf(serverFlags ParsedFlags) ServerConf {
-	serverConf := ServerConf{
-		ServerTimeout: 30,
-		ServerAddr:    ":8080",
-	}
-	if serverFlags.Addr() != "" {
-		serverConf.ServerAddr = serverFlags.Addr()
-	} else {
-		_ = env.Parse(&serverConf)
-	}
-	return serverConf
-}
-
-type App struct {
+// AppConf is application specific configuration. As BASE_URL
+// is visible and affects user, decided to put it here not to ServerConf
+type AppConf struct {
 	BaseURL  string `env:"BASE_URL"`
 	FilePath string `env:"FILE_STORAGE_PATH"`
 }
 
-func NewAppConf(appFlags ParsedFlags, serverConf ServerConf) App {
+func (a *AppConf) IsFilePathSet() bool {
+	if a.FilePath != "" {
+		return true
+	}
+	return false
+}
 
-	appConf := App{
-		BaseURL:  "http://localhost" + serverConf.ServerAddr,
+type AppsFlagsGetter interface {
+	BaseURL() string
+	Filename() string
+}
+
+func NewAppConf(appFlags AppsFlagsGetter, servAddr string) AppConf {
+	// Default configuration - if it will not be overwritten below
+	// Low priority
+	appConf := AppConf{
+		BaseURL:  "http://localhost" + servAddr,
 		FilePath: "",
 	}
 
-	_ = env.Parse(&appConf)
+	// Configure with ENV vars
+	// Middle priority
+	// Straight dep from env package, should be used through interface as flags but env seems more common
+	// and less user dependent, so no over-engineering here
+	err := env.Parse(&appConf)
+	if err != nil {
+		log.Printf("error while parsing application env vars, %v", err)
+	}
 
+	// Configure with flags
+	// High priority
 	if appFlags.BaseURL() != "" {
 		appConf.BaseURL = appFlags.BaseURL()
 	}
@@ -74,5 +55,36 @@ func NewAppConf(appFlags ParsedFlags, serverConf ServerConf) App {
 		appConf.FilePath = appFlags.Filename()
 	}
 
+	appConf.BaseURL += "/"
 	return appConf
+}
+
+// ServerConf is responsible for sort of "technical" server configuration
+// maybe it will make sense to add BASE_URL here
+type ServerConf struct {
+	ServerTimeout int64  `env:"SERVER_TIMEOUT"`
+	ServerAddr    string `env:"SERVER_ADDRESS"`
+	// other server conf and restrictions
+}
+
+type ServerFlagsGetter interface {
+	Addr() string
+}
+
+func NewServerConf(serverFlags ServerFlagsGetter) ServerConf {
+	serverConf := ServerConf{
+		ServerTimeout: 30,
+		ServerAddr:    ":8080",
+	}
+
+	// todo to flat "ifelse"
+	if serverFlags.Addr() != "" {
+		serverConf.ServerAddr = serverFlags.Addr()
+	} else {
+		err := env.Parse(&serverConf)
+		if err != nil {
+			log.Printf("error while parsing server env vars, %v", err)
+		}
+	}
+	return serverConf
 }
