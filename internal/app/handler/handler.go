@@ -27,7 +27,9 @@ func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 
 	// Middlewares
 	rootRouter.Use(middleware.Recoverer)
-	rootRouter.Use(CompressMiddleware())
+	rootRouter.Use(CompressMiddleware)
+
+	//func(next http.Handler) http.Handler
 
 	// configure application router
 	appRouter := AppRouter{
@@ -93,11 +95,17 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		}
 
 		writer.Header().Set("Content-Type", "application/json")
+		fmt.Println("SET HEADER")
+
 		writer.WriteHeader(201)
+		fmt.Println("WRITE HEADERS")
+
 		_, err = writer.Write(marshalled)
 		if err != nil {
 			log.Printf("error while writing answer: %v", err)
 		}
+
+		fmt.Println("WRITE DONE ")
 
 	} else {
 		writer.WriteHeader(400)
