@@ -63,11 +63,8 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 // Handlers
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
-	fmt.Println("HANDLER REQUEST ")
-
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
-		fmt.Println("READ ALL ERROR ")
 		log.Println(err)
 		writer.WriteHeader(400)
 		return
@@ -95,17 +92,12 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		}
 
 		writer.Header().Set("Content-Type", "application/json")
-		fmt.Println("SET HEADER")
-
 		writer.WriteHeader(201)
-		fmt.Println("WRITE HEADERS")
 
 		_, err = writer.Write(marshalled)
 		if err != nil {
 			log.Printf("error while writing answer: %v", err)
 		}
-
-		fmt.Println("WRITE DONE ")
 
 	} else {
 		writer.WriteHeader(400)
