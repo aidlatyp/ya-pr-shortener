@@ -26,7 +26,6 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 
 	sc := bufio.NewScanner(file)
 	for sc.Scan() {
-
 		var url *domain.URL
 		line := sc.Bytes()
 		err = json.Unmarshal(line, &url)
@@ -44,20 +43,20 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 		file:  file,
 		cache: cache,
 	}, nil
-
 }
 
 func (p *PersistentStorage) Store(url *domain.URL) error {
+
 	bytes, err := json.Marshal(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while marshaling data  %v ", err)
 	}
 
 	bytes = append(bytes, LineBreak)
 
 	_, err = p.file.Write(bytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while writing to file %v ", err)
 	}
 
 	err = p.cache.Store(url)

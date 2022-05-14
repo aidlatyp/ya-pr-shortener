@@ -24,7 +24,7 @@ type gzipResponseWriter struct {
 	gzipWriter io.Writer
 }
 
-// canCompress checks the Content-Type header.
+// canCompress checks if the Content-Type header represent a compressible type of content.
 func (grw *gzipResponseWriter) canCompress() bool {
 	_, ok := compressible[grw.Header().Get("Content-Type")]
 	return ok

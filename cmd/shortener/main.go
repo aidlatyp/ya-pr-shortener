@@ -26,7 +26,7 @@ func main() {
 	if appConf.IsFilePathSet() {
 		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
 		if err != nil {
-			log.Fatalf("cant start corrupted url file %v ", err.Error())
+			log.Fatalf("can't start in persistent mode %v ", err.Error())
 		}
 		defer func() {
 			if err := persistentStorage.Close(); err != nil {

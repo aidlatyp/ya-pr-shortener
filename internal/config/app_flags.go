@@ -24,10 +24,13 @@ func (p *AppFlags) Filename() string {
 }
 
 func ParseFlags() AppFlags {
+
 	parsed := AppFlags{}
 	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
 	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")
 	parsed.fileName = pflag.StringP("f", "f", "", "Filename to store URLs")
+
 	pflag.Parse()
+
 	return parsed
 }
