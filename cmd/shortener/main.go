@@ -13,31 +13,24 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
 )
 
-var serverConf config.ServerConf
-var appConf config.App
-
-func init() {
-	flags := config.NewParsedFlags()
-	serverConf = config.NewServerConf(flags)
-	appConf = config.NewAppConf(flags, serverConf)
-}
-
 func main() {
 
-	var store usecase.Repository
-	// In memory data provider
-	if appConf.FilePath == "" {
-		store = storage.NewURLMemoryStorage()
-		log.Println("no filename, fallback to in memory")
-	} else {
-		// Persistent data provider
-		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath)
+	flags := config.ParseFlags()
+	appConf := config.NewAppConfig(&flags)
+
+	// anyway need im-memory as main storage or as a cache
+	var store usecase.Repository = storage.NewURLMemoryStorage()
+
+	// Configuration and main is relatively simple right now
+	// later if size will grow up - move to separate app struct
+	if appConf.IsFilePathSet() {
+		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
 		if err != nil {
-			log.Fatalf("cant start corrupted url file %v ", err.Error())
+			log.Fatalf("can't start in persistent mode %v ", err.Error())
 		}
 		defer func() {
 			if err := persistentStorage.Close(); err != nil {
-				log.Printf("error while closing file,  not closed with %v", err)
+				log.Print(err)
 			}
 		}()
 		store = persistentStorage
@@ -51,19 +44,18 @@ func main() {
 	uc := usecase.NewShorten(shortener, store)
 
 	// Router
-	bu := appConf.BaseURL + "/"
-	appRouter := handler.NewAppRouter(bu, uc)
+	appRouter := handler.NewAppRouter(appConf.BaseURL, uc)
 
 	// Start
 	server := http.Server{
-		Addr:              serverConf.ServerAddr,
+		Addr:              appConf.ServerAddr,
 		Handler:           appRouter,
-		ReadHeaderTimeout: time.Duration(serverConf.ServerTimeout) * time.Second,
-		ReadTimeout:       time.Duration(serverConf.ServerTimeout) * time.Second,
-		WriteTimeout:      time.Duration(serverConf.ServerTimeout) * time.Second,
+		ReadHeaderTimeout: time.Duration(appConf.ServerTimeout) * time.Second,
+		ReadTimeout:       time.Duration(appConf.ServerTimeout) * time.Second,
+		WriteTimeout:      time.Duration(appConf.ServerTimeout) * time.Second,
 	}
 
-	log.Printf("server starting at %v", serverConf.ServerAddr)
+	log.Printf("server starting at %v", appConf.ServerAddr)
 
 	err := server.ListenAndServe()
 	log.Printf("server finished with: %v", err)

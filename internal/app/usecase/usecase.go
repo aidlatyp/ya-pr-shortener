@@ -1,8 +1,9 @@
 package usecase
 
 import (
-	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"log"
+
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 )
 
 type Repository interface {

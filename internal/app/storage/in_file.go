@@ -7,27 +7,25 @@ import (
 	"os"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 )
 
 const LineBreak byte = '\n'
 
 type PersistentStorage struct {
-	cache *URLMemoryStorage
+	cache usecase.Repository
 	file  *os.File
 }
 
-func NewPersistentStorage(path string) (*PersistentStorage, error) {
+func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
 
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0777)
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		return nil, err
 	}
 
-	cache := NewURLMemoryStorage()
 	sc := bufio.NewScanner(file)
-
 	for sc.Scan() {
-
 		var url *domain.URL
 		line := sc.Bytes()
 		err = json.Unmarshal(line, &url)
@@ -45,32 +43,28 @@ func NewPersistentStorage(path string) (*PersistentStorage, error) {
 		file:  file,
 		cache: cache,
 	}, nil
-
 }
 
 func (p *PersistentStorage) Store(url *domain.URL) error {
 
 	bytes, err := json.Marshal(url)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while marshaling data  %v ", err)
 	}
 
 	bytes = append(bytes, LineBreak)
+
 	_, err = p.file.Write(bytes)
 	if err != nil {
-		return err
+		return fmt.Errorf("error while writing to file %v ", err)
 	}
 
-	p.cache.Store(url)
-	return nil
+	err = p.cache.Store(url)
+	return err
 }
 
 func (p *PersistentStorage) FindByKey(key string) (*domain.URL, error) {
-	url, err := p.cache.FindByKey(key)
-	if err != nil {
-		return nil, err
-	}
-	return url, nil
+	return p.cache.FindByKey(key)
 }
 
 func (p *PersistentStorage) Close() error {

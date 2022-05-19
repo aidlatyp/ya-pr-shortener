@@ -11,6 +11,8 @@ import (
 	"github.com/go-chi/chi/middleware"
 )
 
+const minURLlen = 4
+
 type AppRouter struct {
 	usecase usecase.InputPort
 	*chi.Mux
@@ -24,7 +26,9 @@ func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 
 	// Middlewares
 	rootRouter.Use(middleware.Recoverer)
-	rootRouter.Use(CustomMiddleware(struct{}{}))
+	rootRouter.Use(CompressMiddleware)
+
+	//func(next http.Handler) http.Handler
 
 	// configure application router
 	appRouter := AppRouter{
@@ -60,6 +64,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
+		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -67,6 +72,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
+		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -86,6 +92,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(201)
+
 		_, err = writer.Write(marshalled)
 		if err != nil {
 			log.Printf("error while writing answer: %v", err)
@@ -114,7 +121,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
 	input, err := io.ReadAll(request.Body)
-	if err != nil || len(input) < len("xx.xx") {
+	if err != nil || len(input) < minURLlen {
 		writer.WriteHeader(400)
 		return
 	}

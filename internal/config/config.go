@@ -1,78 +1,78 @@
 package config
 
 import (
+	"log"
+	"sync"
+
 	"github.com/caarlos0/env/v6"
-	"github.com/spf13/pflag"
 )
 
+// ShortenedURLLen configure "main functionality"
 const ShortenedURLLen int = 5
 
-type ParsedFlags struct {
-	addr     *string
-	baseURL  *string
-	fileName *string
-}
-
-func (p *ParsedFlags) Addr() string {
-	return *p.addr
-}
-
-func (p *ParsedFlags) BaseURL() string {
-	return *p.baseURL
-}
-
-func (p *ParsedFlags) Filename() string {
-	return *p.fileName
-}
-
-func NewParsedFlags() ParsedFlags {
-	parsed := ParsedFlags{}
-	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
-	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")
-	parsed.fileName = pflag.StringP("f", "f", "", "Filename to store URLs")
-	pflag.Parse()
-	return parsed
-}
-
-type ServerConf struct {
+// AppConfig is application specific configuration.
+type AppConfig struct {
+	BaseURL       string `env:"BASE_URL"`
+	FilePath      string `env:"FILE_STORAGE_PATH"`
 	ServerTimeout int64  `env:"SERVER_TIMEOUT"`
 	ServerAddr    string `env:"SERVER_ADDRESS"`
+	sync.Once
 }
 
-func NewServerConf(serverFlags ParsedFlags) ServerConf {
-	serverConf := ServerConf{
-		ServerTimeout: 30,
-		ServerAddr:    ":8080",
-	}
-	if serverFlags.Addr() != "" {
-		serverConf.ServerAddr = serverFlags.Addr()
-	} else {
-		_ = env.Parse(&serverConf)
-	}
-	return serverConf
+// FlagGetter abstracts from flag source
+type FlagGetter interface {
+	BaseURL() string
+	Filename() string
+	Addr() string
 }
 
-type App struct {
-	BaseURL  string `env:"BASE_URL"`
-	FilePath string `env:"FILE_STORAGE_PATH"`
+// App do not support hot configuration reload
+// so in this case usually makes sense explicitly made configuration happen only once
+// Configuration Singleton (?)
+var appConfig *AppConfig = nil
+
+func NewAppConfig(appFlags FlagGetter) *AppConfig {
+	if appConfig == nil {
+		appConfig = &AppConfig{}
+		appConfig.Do(func() {
+			appConfig.configure(appFlags)
+		})
+		return appConfig
+	}
+	return appConfig
 }
 
-func NewAppConf(appFlags ParsedFlags, serverConf ServerConf) App {
+func (a *AppConfig) IsFilePathSet() bool {
+	return a.FilePath != ""
+}
 
-	appConf := App{
-		BaseURL:  "http://localhost" + serverConf.ServerAddr,
-		FilePath: "",
+func (a *AppConfig) configure(appFlags FlagGetter) {
+
+	// Default configuration - if it will not be overwritten below
+	// Low priority
+	a.BaseURL = "http://localhost" + ":8080"
+	a.FilePath = ""
+	a.ServerTimeout = 30
+	a.ServerAddr = ":8080"
+
+	// Configure with ENV vars
+	// Middle priority
+	err := env.Parse(a)
+	if err != nil {
+		log.Printf("error while parsing application env vars, %v", err)
 	}
 
-	_ = env.Parse(&appConf)
-
+	// Configure with Flags
+	// High priority
+	if appFlags.Addr() != "" {
+		a.ServerAddr = appFlags.Addr()
+	}
 	if appFlags.BaseURL() != "" {
-		appConf.BaseURL = appFlags.BaseURL()
+		a.BaseURL = appFlags.BaseURL()
 	}
-
 	if appFlags.Filename() != "" {
-		appConf.FilePath = appFlags.Filename()
+		a.FilePath = appFlags.Filename()
 	}
 
-	return appConf
+	a.BaseURL += "/"
 }
