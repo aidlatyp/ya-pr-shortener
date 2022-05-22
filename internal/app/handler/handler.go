@@ -61,7 +61,7 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, ok := request.Context().Value("userCtx").(string)
+	ctxUserID, ok := request.Context().Value("userID").(string)
 	if !ok {
 		writer.WriteHeader(404)
 		return
@@ -74,16 +74,16 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 	}
 
 	type Presentation struct {
-		ShortUrl    string `json:"short_url"`
-		OriginalUrl string `json:"original_url"`
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
 	}
 
 	outputList := make([]Presentation, 0, len(resultList))
 
 	for _, v := range resultList {
 		p := Presentation{
-			ShortUrl:    a.baseURL + v.Short,
-			OriginalUrl: v.Orig,
+			ShortURL:    a.baseURL + v.Short,
+			OriginalURL: v.Orig,
 		}
 		outputList = append(outputList, p)
 	}
@@ -92,14 +92,18 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(200)
-	writer.Write(marshaled)
+
+	_, err = writer.Write(marshaled)
+	if err != nil {
+		log.Printf("error while writing answer: %v", err)
+	}
 
 }
 
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, _ = request.Context().Value("userCtx").(string)
+	ctxUserID, _ = request.Context().Value("userID").(string)
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -158,7 +162,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, _ = request.Context().Value("userCtx").(string)
+	ctxUserID, _ = request.Context().Value("userID").(string)
 
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {

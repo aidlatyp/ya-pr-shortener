@@ -5,7 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
@@ -44,7 +44,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 
 			cookieBytes, err := hex.DecodeString(signedCookie.Value)
 			if err != nil {
-				fmt.Println(err)
+				log.Println(err)
 			}
 
 			userId := cookieBytes[:6]
@@ -60,7 +60,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				userID = registerUser(writer)
 			}
 		}
-		userCtx := context.WithValue(request.Context(), "userCtx", string(userID))
+		userCtx := context.WithValue(request.Context(), "userID", string(userID))
 		request = request.WithContext(userCtx)
 		next.ServeHTTP(writer, request)
 	})
