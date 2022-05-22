@@ -13,7 +13,7 @@ type Shorten [shortenedURLLen]byte
 // Generator is an interface used by Shortener to create a random strings
 // and do not depend on concrete random generation algorithm
 // Therefore later it will be easy to migrate to more effective generation algorithm
-// without affecting core business logic
+// without affecting core "business logic"
 type Generator interface {
 	Generate() Shorten
 }
