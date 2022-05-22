@@ -8,11 +8,16 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
 )
 
 const secret = "secret"
+
+type key int
+
+const (
+	UserIDCtxKey key = iota
+)
 
 func registerUser(writer http.ResponseWriter) []byte {
 
@@ -59,7 +64,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				userID = registerUser(writer)
 			}
 		}
-		userCtx := context.WithValue(request.Context(), config.UserIDCtxKey, string(userID))
+		userCtx := context.WithValue(request.Context(), UserIDCtxKey, string(userID))
 		request = request.WithContext(userCtx)
 		next.ServeHTTP(writer, request)
 	})
