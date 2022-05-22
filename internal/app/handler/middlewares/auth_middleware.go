@@ -47,20 +47,18 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				log.Println(err)
 			}
 
-			userId := cookieBytes[:6]
+			userID = cookieBytes[:6]
 			incomeSign := cookieBytes[6:]
 
 			h := hmac.New(sha256.New, []byte(secret))
-			h.Write(userId)
+			h.Write(userID)
 			controlSign := h.Sum(nil)
 
-			if hmac.Equal(incomeSign, controlSign) {
-				userID = userId
-			} else {
+			if !hmac.Equal(incomeSign, controlSign) {
 				userID = registerUser(writer)
 			}
 		}
-		userCtx := context.WithValue(request.Context(), "userID", string(userID))
+		userCtx := context.WithValue(request.Context(), "userIDKey", string(userID))
 		request = request.WithContext(userCtx)
 		next.ServeHTTP(writer, request)
 	})
