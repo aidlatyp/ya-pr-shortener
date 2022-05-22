@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,12 +19,15 @@ type usecaseMock struct {
 	e bool   // err
 }
 
-func (u *usecaseMock) Shorten(_ string) string { return u.s }
+func (u *usecaseMock) Shorten(_ string, _ string) string { return u.s }
 func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 	if u.e {
 		return "", errors.New("usecase error")
 	}
 	return u.o, nil
+}
+func (u *usecaseMock) ShowAll(_ string) ([]*domain.URL, error) {
+	return nil, nil
 }
 
 func TestAppHandler_HandleMain(t *testing.T) {

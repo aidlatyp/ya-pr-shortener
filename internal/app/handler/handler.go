@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -83,7 +82,7 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 	for _, v := range resultList {
 		p := Presentation{
-			ShortUrl:    v.Short,
+			ShortUrl:    a.baseURL + v.Short,
 			OriginalUrl: v.Orig,
 		}
 		outputList = append(outputList, p)
@@ -100,12 +99,10 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, ok := request.Context().Value("userCtx").(string)
-	fmt.Println(ok)
+	ctxUserID, _ = request.Context().Value("userCtx").(string)
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
-		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -113,7 +110,6 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
-		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -162,8 +158,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, ok := request.Context().Value("userCtx").(string)
-	fmt.Println(ok)
+	ctxUserID, _ = request.Context().Value("userCtx").(string)
 
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {

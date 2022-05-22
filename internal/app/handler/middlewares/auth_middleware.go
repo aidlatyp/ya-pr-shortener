@@ -57,7 +57,6 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			if hmac.Equal(incomeSign, controlSign) {
 				userID = userId
 			} else {
-				fmt.Println("bad sign")
 				userID = registerUser(writer)
 			}
 		}
