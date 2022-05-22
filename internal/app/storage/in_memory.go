@@ -51,11 +51,9 @@ func (u *URLMemoryStorage) FindAll(userKey string) []*domain.URL {
 	}
 
 	resultList := make([]*domain.URL, 0, len(userBucket))
-
 	for _, key := range userBucket {
-		orig, _ := u.storage[key]
+		orig := u.storage[key]
 		url := domain.NewURL(orig, key)
-
 		resultList = append(resultList, url)
 	}
 	return resultList
