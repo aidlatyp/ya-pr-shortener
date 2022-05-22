@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
 )
 
@@ -58,7 +59,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 				userID = registerUser(writer)
 			}
 		}
-		userCtx := context.WithValue(request.Context(), "userIDKey", string(userID))
+		userCtx := context.WithValue(request.Context(), config.UserIDCtxKey, string(userID))
 		request = request.WithContext(userCtx)
 		next.ServeHTTP(writer, request)
 	})

@@ -8,6 +8,7 @@ import (
 
 	appMiddle "github.com/aidlatyp/ya-pr-shortener/internal/app/handler/middlewares"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
+	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/go-chi/chi"
 	chiMiddle "github.com/go-chi/chi/middleware"
 )
@@ -60,8 +61,7 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 // Handlers
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
 
-	var ctxUserID string
-	ctxUserID, ok := request.Context().Value("userID").(string)
+	ctxUserID, ok := request.Context().Value(config.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(404)
 		return
@@ -103,7 +103,7 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
 	var ctxUserID string
-	ctxUserID, _ = request.Context().Value("userID").(string)
+	ctxUserID, _ = request.Context().Value(config.UserIDCtxKey).(string)
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -161,8 +161,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
-	var ctxUserID string
-	ctxUserID, _ = request.Context().Value("userID").(string)
+	ctxUserID, _ := request.Context().Value(config.UserIDCtxKey).(string)
 
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {

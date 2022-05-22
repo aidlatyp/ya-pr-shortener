@@ -7,6 +7,8 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+const UserIDCtxKey = 1
+
 // ShortenedURLLen configure "main functionality"
 const ShortenedURLLen int = 5
 
