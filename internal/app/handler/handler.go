@@ -6,9 +6,10 @@ import (
 	"log"
 	"net/http"
 
+	appMiddle "github.com/aidlatyp/ya-pr-shortener/internal/app/handler/middlewares"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	chiMiddle "github.com/go-chi/chi/middleware"
 )
 
 const minURLlen = 4
@@ -20,15 +21,12 @@ type AppRouter struct {
 }
 
 func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
-
 	// Root router
 	rootRouter := chi.NewRouter()
-
 	// Middlewares
-	rootRouter.Use(middleware.Recoverer)
-	rootRouter.Use(CompressMiddleware)
-
-	//func(next http.Handler) http.Handler
+	rootRouter.Use(chiMiddle.Recoverer)
+	rootRouter.Use(appMiddle.AuthMiddleware)
+	rootRouter.Use(appMiddle.CompressMiddleware)
 
 	// configure application router
 	appRouter := AppRouter{
@@ -36,9 +34,7 @@ func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
 		Mux:     rootRouter,
 		baseURL: baseURL,
 	}
-
 	appRouter.apiRouter()
-
 	return &appRouter
 }
 
@@ -50,8 +46,10 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 	// Endpoints
 	apiRouter.Get("/{id}", a.handleGet)
 	apiRouter.Post("/", a.handlePost)
-	// Api
+
+	// api
 	apiRouter.Post("/api/shorten", a.handleShorten)
+	apiRouter.Get("/api/user/urls", a.handleUserURLs)
 
 	// Mount sub router to root router
 	a.Mount("/", apiRouter)
@@ -60,11 +58,54 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 }
 
 // Handlers
+func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
+
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(404)
+		return
+	}
+
+	resultList, err := a.usecase.ShowAll(ctxUserID)
+	if err != nil {
+		writer.WriteHeader(204)
+		return
+	}
+
+	type Presentation struct {
+		ShortURL    string `json:"short_url"`
+		OriginalURL string `json:"original_url"`
+	}
+
+	outputList := make([]Presentation, 0, len(resultList))
+
+	for _, v := range resultList {
+		p := Presentation{
+			ShortURL:    a.baseURL + v.Short,
+			OriginalURL: v.Orig,
+		}
+		outputList = append(outputList, p)
+	}
+
+	marshaled, _ := json.Marshal(outputList)
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(200)
+
+	_, err = writer.Write(marshaled)
+	if err != nil {
+		log.Printf("error while writing answer: %v", err)
+	}
+
+}
+
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
+
+	var ctxUserID string
+	ctxUserID, _ = request.Context().Value(appMiddle.UserIDCtxKey).(string)
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
-		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
@@ -72,14 +113,13 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
-		log.Println(err)
 		writer.WriteHeader(400)
 		return
 	}
 
 	if origURL, ok := input["url"]; ok {
 
-		id := a.usecase.Shorten(origURL)
+		id := a.usecase.Shorten(origURL, ctxUserID)
 
 		output := map[string]string{
 			"result": a.baseURL + id,
@@ -120,16 +160,19 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
 
+	ctxUserID, _ := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {
 		writer.WriteHeader(400)
 		return
 	}
 
-	id := a.usecase.Shorten(string(input))
+	id := a.usecase.Shorten(string(input), ctxUserID)
 
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(201)
+
 	_, err = writer.Write([]byte(a.baseURL + id))
 	if err != nil {
 		log.Printf("error while writing answer: %v", err)

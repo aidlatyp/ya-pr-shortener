@@ -18,7 +18,7 @@ func main() {
 	flags := config.ParseFlags()
 	appConf := config.NewAppConfig(&flags)
 
-	// anyway need im-memory as main storage or as a cache
+	// anyway need in-memory as main storage or as a cache
 	var store usecase.Repository = storage.NewURLMemoryStorage()
 
 	// Configuration and main is relatively simple right now
@@ -54,7 +54,6 @@ func main() {
 		ReadTimeout:       time.Duration(appConf.ServerTimeout) * time.Second,
 		WriteTimeout:      time.Duration(appConf.ServerTimeout) * time.Second,
 	}
-
 	log.Printf("server starting at %v", appConf.ServerAddr)
 
 	err := server.ListenAndServe()

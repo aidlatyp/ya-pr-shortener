@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
@@ -9,11 +10,13 @@ import (
 type Repository interface {
 	Store(*domain.URL) error
 	FindByKey(string) (*domain.URL, error)
+	FindAll(string) []*domain.URL
 }
 
 type InputPort interface {
-	Shorten(string) string
+	Shorten(string, string) string
 	RestoreOrigin(string) (string, error)
+	ShowAll(string) ([]*domain.URL, error)
 }
 
 type Shorten struct {
@@ -28,13 +31,24 @@ func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
 	}
 }
 
-func (s *Shorten) Shorten(url string) string {
+func (s *Shorten) Shorten(url string, userID string) string {
+
 	short := s.shortener.MakeShort(url)
+
+	var user *domain.User = nil
+	if userID != "" {
+		user = &domain.User{
+			ID: userID,
+		}
+		short.Owner = user.ID
+	}
+
 	err := s.repo.Store(short)
 	if err != nil {
 		// process an error in the future
 		log.Println(err.Error())
 	}
+
 	return short.Short
 }
 
@@ -44,4 +58,12 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 		return "", err
 	}
 	return url.Orig, nil
+}
+
+func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
+	list := s.repo.FindAll(user)
+	if list == nil {
+		return nil, fmt.Errorf("seems user %v do not have any links yet", user)
+	}
+	return list, nil
 }

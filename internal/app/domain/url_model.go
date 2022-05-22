@@ -5,11 +5,13 @@ package domain
 type URL struct {
 	Orig  string
 	Short string
+	Owner string
 }
 
 func NewURL(original, short string) *URL {
 	return &URL{
 		Orig:  original,
 		Short: short,
+		Owner: "",
 	}
 }

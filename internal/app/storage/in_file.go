@@ -26,6 +26,7 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 
 	sc := bufio.NewScanner(file)
 	for sc.Scan() {
+
 		var url *domain.URL
 		line := sc.Bytes()
 		err = json.Unmarshal(line, &url)
@@ -65,6 +66,10 @@ func (p *PersistentStorage) Store(url *domain.URL) error {
 
 func (p *PersistentStorage) FindByKey(key string) (*domain.URL, error) {
 	return p.cache.FindByKey(key)
+}
+
+func (p *PersistentStorage) FindAll(key string) []*domain.URL {
+	return p.cache.FindAll(key)
 }
 
 func (p *PersistentStorage) Close() error {
