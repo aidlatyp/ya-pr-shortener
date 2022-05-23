@@ -15,33 +15,46 @@ import (
 const minURLlen = 4
 
 type AppRouter struct {
-	usecase usecase.InputPort
+	usecase    usecase.InputPort
+	liveliness *usecase.Liveliness
 	*chi.Mux
 	baseURL string
 }
 
-func NewAppRouter(baseURL string, usecase usecase.InputPort) *AppRouter {
+func NewAppRouter(
+	baseURL string,
+	appUsecase usecase.InputPort,
+	liveliness *usecase.Liveliness,
+) *AppRouter {
+
 	// Root router
 	rootRouter := chi.NewRouter()
-	// Middlewares
+
+	// Root Middlewares
 	rootRouter.Use(chiMiddle.Recoverer)
 	rootRouter.Use(appMiddle.AuthMiddleware)
-	rootRouter.Use(appMiddle.CompressMiddleware)
 
 	// configure application router
 	appRouter := AppRouter{
-		usecase: usecase,
-		Mux:     rootRouter,
-		baseURL: baseURL,
+		usecase:    appUsecase,
+		Mux:        rootRouter,
+		baseURL:    baseURL,
+		liveliness: liveliness,
 	}
+
 	appRouter.apiRouter()
+	appRouter.infraRouter()
+
 	return &appRouter
 }
 
 // apiRouter is a sub router which serve public api endpoints
-func (a *AppRouter) apiRouter() *chi.Mux {
+func (a *AppRouter) apiRouter() {
 
 	apiRouter := chi.NewRouter()
+
+	// compress api endpoints only
+	apiRouter.Use(appMiddle.CompressMiddleware)
 
 	// Endpoints
 	apiRouter.Get("/{id}", a.handleGet)
@@ -53,8 +66,22 @@ func (a *AppRouter) apiRouter() *chi.Mux {
 
 	// Mount sub router to root router
 	a.Mount("/", apiRouter)
+}
 
-	return apiRouter
+// infraRouter is a sub router which serve infrastructure endpoints
+func (a *AppRouter) infraRouter() {
+
+	infraRouter := chi.NewRouter()
+	infraRouter.Get("/", a.handlePing)
+	a.Mount("/ping", infraRouter)
+}
+
+func (a *AppRouter) handlePing(writer http.ResponseWriter, request *http.Request) {
+	err := a.liveliness.Do()
+	if err != nil {
+		writer.WriteHeader(500)
+	}
+	writer.WriteHeader(200)
 }
 
 // Handlers
@@ -118,9 +145,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	}
 
 	if origURL, ok := input["url"]; ok {
-
 		id := a.usecase.Shorten(origURL, ctxUserID)
-
 		output := map[string]string{
 			"result": a.baseURL + id,
 		}
@@ -132,7 +157,6 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 
 		writer.Header().Set("Content-Type", "application/json")
 		writer.WriteHeader(201)
-
 		_, err = writer.Write(marshalled)
 		if err != nil {
 			log.Printf("error while writing answer: %v", err)

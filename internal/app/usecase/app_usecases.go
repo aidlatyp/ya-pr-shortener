@@ -24,7 +24,10 @@ type Shorten struct {
 	repo      Repository
 }
 
-func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
+func NewShorten(
+	shortener *domain.Shortener,
+	repo Repository,
+) *Shorten {
 	return &Shorten{
 		shortener: shortener,
 		repo:      repo,
@@ -32,9 +35,7 @@ func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
 }
 
 func (s *Shorten) Shorten(url string, userID string) string {
-
 	short := s.shortener.MakeShort(url)
-
 	var user *domain.User = nil
 	if userID != "" {
 		user = &domain.User{
@@ -48,7 +49,6 @@ func (s *Shorten) Shorten(url string, userID string) string {
 		// process an error in the future
 		log.Println(err.Error())
 	}
-
 	return short.Short
 }
 

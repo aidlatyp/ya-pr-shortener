@@ -8,6 +8,7 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/handler"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/storage"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/storage/postgres"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 	"github.com/aidlatyp/ya-pr-shortener/internal/util"
@@ -36,15 +37,31 @@ func main() {
 		store = persistentStorage
 	}
 
+	// db
+	pg, err := postgres.NewDB(appConf.DBConnect)
+	if err != nil {
+		log.Printf("can't start database %v", err.Error())
+	}
+	defer func() {
+		if err := pg.Close(); err != nil {
+			log.Print(err)
+		}
+	}()
+	// end db
+
 	// Domain
 	gen := util.GetGenerator()
 	shortener := domain.NewShortener(gen)
 
-	// Usecase
-	uc := usecase.NewShorten(shortener, store)
+	// Usecases
+	shortenUsecase := usecase.NewShorten(shortener, store)
+	dbCheckUsecase := usecase.NewLiveliness(pg)
 
-	// Router
-	appRouter := handler.NewAppRouter(appConf.BaseURL, uc)
+	// Application Router
+	appRouter := handler.NewAppRouter(
+		appConf.BaseURL,
+		shortenUsecase,
+		dbCheckUsecase)
 
 	// Start
 	server := http.Server{
@@ -54,8 +71,9 @@ func main() {
 		ReadTimeout:       time.Duration(appConf.ServerTimeout) * time.Second,
 		WriteTimeout:      time.Duration(appConf.ServerTimeout) * time.Second,
 	}
+
 	log.Printf("server starting at %v", appConf.ServerAddr)
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	log.Printf("server finished with: %v", err)
 }

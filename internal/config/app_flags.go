@@ -3,9 +3,10 @@ package config
 import "github.com/spf13/pflag"
 
 type AppFlags struct {
-	addr     *string
-	baseURL  *string
-	fileName *string
+	addr        *string
+	baseURL     *string
+	fileName    *string
+	databaseDSN *string
 }
 
 // Addr and other methods to get unexported fields
@@ -23,12 +24,17 @@ func (p *AppFlags) Filename() string {
 	return *p.fileName
 }
 
+func (p *AppFlags) DatabaseDSN() string {
+	return *p.databaseDSN
+}
+
 func ParseFlags() AppFlags {
 
 	parsed := AppFlags{}
 	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
 	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")
 	parsed.fileName = pflag.StringP("f", "f", "", "Filename to store URLs")
+	parsed.databaseDSN = pflag.StringP("d", "d", "", "Connection string for DB")
 
 	pflag.Parse()
 

@@ -16,6 +16,7 @@ type AppConfig struct {
 	FilePath      string `env:"FILE_STORAGE_PATH"`
 	ServerTimeout int64  `env:"SERVER_TIMEOUT"`
 	ServerAddr    string `env:"SERVER_ADDRESS"`
+	DBConnect     string `env:"DATABASE_DSN"`
 	sync.Once
 }
 
@@ -24,6 +25,7 @@ type FlagGetter interface {
 	BaseURL() string
 	Filename() string
 	Addr() string
+	DatabaseDSN() string
 }
 
 // App do not support hot configuration reload
@@ -54,6 +56,7 @@ func (a *AppConfig) configure(appFlags FlagGetter) {
 	a.FilePath = ""
 	a.ServerTimeout = 30
 	a.ServerAddr = ":8080"
+	a.DBConnect = ""
 
 	// Configure with ENV vars
 	// Middle priority
@@ -72,6 +75,9 @@ func (a *AppConfig) configure(appFlags FlagGetter) {
 	}
 	if appFlags.Filename() != "" {
 		a.FilePath = appFlags.Filename()
+	}
+	if appFlags.DatabaseDSN() != "" {
+		a.DBConnect = appFlags.DatabaseDSN()
 	}
 
 	a.BaseURL += "/"
