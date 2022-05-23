@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 
 	shortener "github.com/aidlatyp/ya-pr-shortener/internal/app"
@@ -140,20 +141,21 @@ func (h *Handler) SaveURLHandler(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) GetAllSavedURLs(w http.ResponseWriter, r *http.Request) {
 
-	fmt.Println(h.configs.BaseURL)
-	fmt.Println(h.configs.ServerAddress)
-	fmt.Println(h.configs.BaseURL)
+	log.Println("GetAllSavedURLs")
 
-	//if r.Method != http.MethodGet {
-	//	http.Error(w, "Only GET requests are allowed by this route!", http.StatusMethodNotAllowed)
-	//	return
-	//}
+	log.Println(h.configs.BaseURL)
+	log.Println(h.configs.ServerAddress)
 
-	urls, _ := h.sh.GetAllURL(h.configs.BaseURL)
-	//if err != nil {
-	//	http.Error(w, "Errors happens when get all saved URLS!", http.StatusInternalServerError)
-	//	return
-	//}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Only GET requests are allowed by this route!", http.StatusMethodNotAllowed)
+		return
+	}
+
+	urls, err := h.sh.GetAllURL(h.configs.BaseURL)
+	if err != nil {
+		http.Error(w, "Errors happens when get all saved URLS!", http.StatusInternalServerError)
+		return
+	}
 
 	fmt.Println("LEN -> ", len(urls))
 
@@ -166,11 +168,11 @@ func (h *Handler) GetAllSavedURLs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
-	//resp, err := json.Marshal(urls)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//	return
-	//}
+	resp, err := json.Marshal(urls)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-	//w.Write(resp)
+	w.Write(resp)
 }
