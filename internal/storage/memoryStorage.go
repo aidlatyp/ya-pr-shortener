@@ -1,6 +1,9 @@
 package storage
 
-import "sync"
+import (
+	"log"
+	"sync"
+)
 
 type MemoryStorage struct {
 	mutex     sync.RWMutex
@@ -9,11 +12,12 @@ type MemoryStorage struct {
 
 func NewMemoryStorage() *MemoryStorage {
 	return &MemoryStorage{
-		shortURLs: make(map[string]string),
+		shortURLs: make(map[string]string, 0),
 	}
 }
 
 func (ms *MemoryStorage) GetAll() (map[string]string, error) {
+	log.Println("IN MEMORY ->", len(ms.shortURLs))
 	ms.mutex.Lock()
 	defer ms.mutex.Unlock()
 	return ms.shortURLs, nil
