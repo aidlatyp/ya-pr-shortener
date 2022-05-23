@@ -90,8 +90,7 @@ func (s *Shortener) GetAllURL(baseURL string) ([]*URL, error) {
 		return nil, err
 	}
 
-	urls := make([]*URL, 0, 0)
-
+	urls := make([]*URL, 0)
 	for longURL, shortURL := range urlsMap {
 		urls = append(urls, &URL{
 			ShortURL:    fmt.Sprintf("%s/%s", baseURL, shortURL),
