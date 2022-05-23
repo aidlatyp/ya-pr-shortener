@@ -9,9 +9,16 @@ import (
 	"testing"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type pingMock struct{}
+
+func (p *pingMock) Ping() error {
+	return nil
+}
 
 type usecaseMock struct {
 	s string // short
@@ -39,8 +46,10 @@ func TestAppHandler_HandleMain(t *testing.T) {
 			o: "http://example.com",
 			e: false,
 		}
+		l := usecase.NewLiveliness(&pingMock{})
+
 		// Main App router
-		h := NewAppRouter("http://localhost:8080/", uc)
+		h := NewAppRouter("http://localhost:8080/", uc, l)
 
 		// POST request
 		body := bytes.NewBufferString("http://example.com")
@@ -100,9 +109,10 @@ func TestAppHandler_ApiJson_ShortURL(t *testing.T) {
 			o: "http://example.com",
 			e: false,
 		}
+		l := usecase.NewLiveliness(&pingMock{})
 
 		// Main App router
-		h := NewAppRouter("http://localhost:8080/", uc)
+		h := NewAppRouter("http://localhost:8080/", uc, l)
 
 		// OK
 		// Prepare request json
