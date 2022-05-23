@@ -72,10 +72,10 @@ func (d *DB) FindAll(user string) []*domain.URL {
 
 	q := fmt.Sprintf(`SELECT id,orig_url, user_id FROM public.urls WHERE user_id = '%s';`, user)
 	rows, err := d.conn.Query(q)
-	defer rows.Close()
 	if err != nil {
 		return result
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		url := domain.URL{}
@@ -87,6 +87,11 @@ func (d *DB) FindAll(user string) []*domain.URL {
 			return []*domain.URL{}
 		}
 		result = append(result, &url)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Println(err)
 	}
 	return result
 }
