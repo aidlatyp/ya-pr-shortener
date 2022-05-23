@@ -84,12 +84,13 @@ type URL struct {
 }
 
 func (s *Shortener) GetAllURL(baseURL string) ([]*URL, error) {
+
 	urlsMap, err := s.repo.GetAll()
 	if err != nil {
 		return nil, err
 	}
 
-	urls := make([]*URL, 0, len(urlsMap))
+	urls := make([]*URL, 0, 0)
 
 	for longURL, shortURL := range urlsMap {
 		urls = append(urls, &URL{
