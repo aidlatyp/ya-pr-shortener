@@ -20,9 +20,7 @@ const (
 )
 
 func registerUser(writer http.ResponseWriter) []byte {
-
 	userID := util.GenerateUserID()
-
 	h := hmac.New(sha256.New, []byte(secret))
 	h.Write(userID)
 	signed := h.Sum(nil)
@@ -32,7 +30,6 @@ func registerUser(writer http.ResponseWriter) []byte {
 		Value:  hex.EncodeToString(append(userID, signed...)),
 		MaxAge: 3600 * 24,
 	}
-
 	http.SetCookie(writer, &c)
 	return userID
 }
@@ -43,8 +40,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		var userID []byte
 		signedCookie, err := request.Cookie("user_id")
 
-		// register
 		if err != nil {
+			// Register user silently
 			userID = registerUser(writer)
 		} else {
 
@@ -52,18 +49,18 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			if err != nil {
 				log.Println(err)
 			}
-
 			userID = cookieBytes[:6]
 			incomeSign := cookieBytes[6:]
-
 			h := hmac.New(sha256.New, []byte(secret))
 			h.Write(userID)
 			controlSign := h.Sum(nil)
 
 			if !hmac.Equal(incomeSign, controlSign) {
+				// Register user silently
 				userID = registerUser(writer)
 			}
 		}
+
 		userCtx := context.WithValue(request.Context(), UserIDCtxKey, string(userID))
 		request = request.WithContext(userCtx)
 		next.ServeHTTP(writer, request)

@@ -47,19 +47,15 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 }
 
 func (p *PersistentStorage) Store(url *domain.URL) error {
-
 	bytes, err := json.Marshal(url)
 	if err != nil {
 		return fmt.Errorf("error while marshaling data  %v ", err)
 	}
-
 	bytes = append(bytes, LineBreak)
-
 	_, err = p.file.Write(bytes)
 	if err != nil {
 		return fmt.Errorf("error while writing to file %v ", err)
 	}
-
 	err = p.cache.Store(url)
 	return err
 }
