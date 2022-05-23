@@ -16,7 +16,7 @@ func GetConfigs() (*Config, error) {
 
 	config.ServerAddress = os.Getenv("SERVER_ADDRESS")
 	if len(config.ServerAddress) == 0 {
-		flag.StringVar(&config.ServerAddress, "a", "http://localhost:8080", "server address")
+		flag.StringVar(&config.ServerAddress, "a", ":8080", "server address")
 	}
 	config.BaseURL = os.Getenv("BASE_URL")
 	if len(config.BaseURL) == 0 {
