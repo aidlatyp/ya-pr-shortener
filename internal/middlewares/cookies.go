@@ -12,9 +12,8 @@ import (
 
 var (
 	cookieUserName = "UserID"
-	UserID         []byte
+	userID         []byte
 	secretKey      []byte
-	UsersTokens    = make(map[string]struct{})
 )
 
 func generateRandom(size int) ([]byte, error) {
@@ -45,9 +44,7 @@ func checkCookie(r *http.Request) (bool, error) {
 	sign := h.Sum(nil)
 
 	if hmac.Equal(sign, data[4:]) {
-		if _, ok := UsersTokens[fmt.Sprintf("%x", UserID)]; ok {
-			return true, nil
-		}
+		return true, nil
 	}
 
 	return false, nil
@@ -65,13 +62,13 @@ func CookieHandler(next http.Handler) http.Handler {
 
 		if !isCookieCorrect {
 
-			UserID, err = generateRandom(4)
-
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
+			if len(userID) == 0 {
+				userID, err = generateRandom(4)
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
 			}
-
 			if len(secretKey) == 0 {
 				secretKey, err = generateRandom(16)
 				if err != nil {
@@ -81,15 +78,13 @@ func CookieHandler(next http.Handler) http.Handler {
 			}
 
 			h := hmac.New(sha256.New, secretKey)
-			h.Write(UserID)
+			h.Write(userID)
 
 			dst := h.Sum(nil)
 
-			UsersTokens[fmt.Sprintf("%x", UserID)] = struct{}{}
-
 			http.SetCookie(w, &http.Cookie{
 				Name:  cookieUserName,
-				Value: fmt.Sprintf("%x", UserID) + fmt.Sprintf("%x", dst),
+				Value: fmt.Sprintf("%x", userID) + fmt.Sprintf("%x", dst),
 			})
 		}
 

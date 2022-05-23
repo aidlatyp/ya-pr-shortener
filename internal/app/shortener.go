@@ -14,7 +14,7 @@ const (
 	letterCount = 6
 )
 
-func (s *Shortener) GetNewShortener(repo repositories.Repository) *Shortener {
+func GetNewShortener(repo repositories.Repository) *Shortener {
 	return &Shortener{repo: repo}
 }
 

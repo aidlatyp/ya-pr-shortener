@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aidlatyp/ya-pr-shortener/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,10 @@ func NewRouter() (chi.Router, error) {
 		BaseURL:       "http://localhost:8080",
 	}
 
-	handler := NewHandler(configs)
+	handler, _, err := NewHandler(configs)
+	if err != nil {
+		return nil, err
+	}
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/api/shorten", handler.PostShortenURLHandler)

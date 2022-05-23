@@ -2,12 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
 	shortener "github.com/aidlatyp/ya-pr-shortener/internal/app"
-	"github.com/aidlatyp/ya-pr-shortener/internal/middlewares"
 	"github.com/aidlatyp/ya-pr-shortener/internal/repositories"
 	"github.com/aidlatyp/ya-pr-shortener/internal/storage"
 	"github.com/aidlatyp/ya-pr-shortener/internal/utils"
@@ -23,44 +21,27 @@ type PostURLResponse struct {
 }
 
 type Handler struct {
-	configs        *utils.Config
-	userShorteners map[string]*shortener.Shortener
-	ReposClosers   []func() error
+	sh      *shortener.Shortener
+	configs *utils.Config
 }
 
-func NewHandler(configs *utils.Config) *Handler {
-	return &Handler{
-		configs:        configs,
-		userShorteners: make(map[string]*shortener.Shortener),
-		ReposClosers:   make([]func() error, 0),
-	}
-}
+func NewHandler(configs *utils.Config) (*Handler, func() error, error) {
+	var repo repositories.Repository
+	var err error
 
-func (h *Handler) getUserShortener() (*shortener.Shortener, error) {
-
-	userID := fmt.Sprintf("%x", middlewares.UserID)
-
-	if sh, ok := h.userShorteners[userID]; ok {
-		return sh, nil
+	if len(configs.FileStoragePath) == 0 {
+		repo = storage.NewMemoryStorage()
 	} else {
-
-		var repo repositories.Repository
-		var err error
-
-		if len(h.configs.FileStoragePath) == 0 {
-			repo = storage.NewMemoryStorage()
-		} else {
-			repo, err = storage.NewFileStorage(h.configs.FileStoragePath)
-			if err != nil {
-				return nil, err
-			}
+		repo, err = storage.NewFileStorage(configs.FileStoragePath)
+		if err != nil {
+			return nil, nil, err
 		}
-
-		h.userShorteners[userID] = sh.GetNewShortener(repo)
-		h.ReposClosers = append(h.ReposClosers, repo.CloseResources)
-
-		return h.userShorteners[userID], nil
 	}
+
+	return &Handler{
+		sh:      shortener.GetNewShortener(repo),
+		configs: configs,
+	}, repo.CloseResources, nil
 }
 
 func (h *Handler) PostShortenURLHandler(w http.ResponseWriter, r *http.Request) {
@@ -88,13 +69,7 @@ func (h *Handler) PostShortenURLHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sh, err := h.getUserShortener()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	shortURL, err := sh.MakeShortURL(p.URL, h.configs.BaseURL)
+	shortURL, err := h.sh.MakeShortURL(p.URL, h.configs.BaseURL)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -126,13 +101,7 @@ func (h *Handler) GetURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sh, err := h.getUserShortener()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	longURL, err := sh.GetRawURL(id)
+	longURL, err := h.sh.GetRawURL(id)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -156,13 +125,7 @@ func (h *Handler) SaveURLHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sh, err := h.getUserShortener()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	shortURL, err := sh.MakeShortURL(string(rawURL), h.configs.BaseURL)
+	shortURL, err := h.sh.MakeShortURL(string(rawURL), h.configs.BaseURL)
 
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -181,13 +144,7 @@ func (h *Handler) GetAllSavedURLs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sh, err := h.getUserShortener()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-
-	urls, err := sh.GetAllURL(h.configs.BaseURL)
+	urls, err := h.sh.GetAllURL(h.configs.BaseURL)
 	if err != nil {
 		http.Error(w, "Errors happens when get all saved URLS!", http.StatusInternalServerError)
 		return

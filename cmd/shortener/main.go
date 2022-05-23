@@ -9,17 +9,20 @@ import (
 
 func main() {
 
-	handler, err := server.Run(utils.GetConfigs())
+	configs, err := utils.GetConfigs()
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	resourcesCloser, err := server.Run(configs)
 	defer func() {
-		for _, closers := range handler.ReposClosers {
-			err = closers()
-			if err != nil {
-				log.Fatal(err)
-			}
+		if resourcesCloser != nil {
+			resourcesCloser()
 		}
 	}()
+
 	if err != nil {
+		resourcesCloser()
 		log.Fatal(err)
 	}
 }
