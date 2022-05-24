@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -63,6 +64,7 @@ func (a *AppRouter) apiRouter() {
 	// api
 	apiRouter.Post("/api/shorten", a.handleShorten)
 	apiRouter.Get("/api/user/urls", a.handleUserURLs)
+	apiRouter.Post("/api/shorten/batch", a.handleBatch)
 
 	// Mount sub router to root router
 	a.Mount("/", apiRouter)
@@ -70,13 +72,46 @@ func (a *AppRouter) apiRouter() {
 
 // infraRouter is a sub router which serve infrastructure endpoints
 func (a *AppRouter) infraRouter() {
-
 	infraRouter := chi.NewRouter()
 	infraRouter.Get("/", a.handlePing)
 	a.Mount("/ping", infraRouter)
 }
 
-func (a *AppRouter) handlePing(writer http.ResponseWriter, request *http.Request) {
+func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
+
+	log.Println("BATCH")
+
+	_, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(404)
+		return
+	}
+
+	inputBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		writer.WriteHeader(400)
+		return
+	}
+
+	type Correlation struct {
+		CorrelationID string `json:"correlation_id"`
+		OriginalURL   string `json:"original_url"`
+	}
+
+	inputCollection := make([]Correlation, 0)
+	err = json.Unmarshal(inputBytes, &inputCollection)
+	if err != nil {
+		log.Printf("cant unmarshal due to %v", err)
+	}
+
+	for k, v := range inputCollection {
+		fmt.Println(k, v)
+	}
+
+}
+
+// Handlers
+func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 	err := a.liveliness.Do()
 	if err != nil {
 		writer.WriteHeader(500)
@@ -84,7 +119,6 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, request *http.Request
 	writer.WriteHeader(200)
 }
 
-// Handlers
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
 
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
@@ -105,7 +139,6 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 	}
 
 	outputList := make([]Presentation, 0, len(resultList))
-
 	for _, v := range resultList {
 		p := Presentation{
 			ShortURL:    a.baseURL + v.Short,
@@ -115,7 +148,6 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 	}
 
 	marshaled, _ := json.Marshal(outputList)
-
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(200)
 

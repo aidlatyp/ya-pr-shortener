@@ -25,6 +25,7 @@ func NewDB(dsn string) (*DB, error) {
 }
 
 func (d *DB) Store(url *domain.URL) error {
+
 	// todo TX
 	q := fmt.Sprintf(`SELECT id FROM public.users WHERE  id = '%s';`, url.Owner)
 	row := d.conn.QueryRow(q)
