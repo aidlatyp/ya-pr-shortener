@@ -99,10 +99,13 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 	}
 
 	outputList, err := a.usecase.ShortenBatch(inputCollection)
+	for index := range outputList {
+		outputList[index].ShortURL = a.baseURL + outputList[index].ShortURL
+	}
 
 	marshaled, _ := json.Marshal(outputList)
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(200)
+	writer.WriteHeader(201)
 
 	_, err = writer.Write(marshaled)
 	if err != nil {
@@ -154,7 +157,7 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 	marshaled, _ := json.Marshal(outputList)
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(201)
+	writer.WriteHeader(200)
 
 	_, err = writer.Write(marshaled)
 	if err != nil {
