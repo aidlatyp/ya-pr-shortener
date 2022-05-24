@@ -97,6 +97,9 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 	}
 
 	outputList, err := a.usecase.ShortenBatch(inputCollection, ctxUserID)
+	if err != nil {
+	}
+
 	for index := range outputList {
 		outputList[index].ShortURL = a.baseURL + outputList[index].ShortURL
 	}

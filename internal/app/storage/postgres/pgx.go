@@ -27,37 +27,41 @@ func NewDB(dsn string) (*DB, error) {
 
 func (d *DB) BatchWrite(uris []domain.URL) error {
 
-	//for _, v := range uris {
-	//	fmt.Println(v.Owner)
-	//}
-	//
-	// шаг 1 — объявляем транзакцию
 	tx, err := d.conn.Begin()
 	if err != nil {
 		log.Println(err)
 		return err
 	}
-	// шаг 1.1 — если возникает ошибка, откатываем изменения
-	defer tx.Rollback()
 
-	// шаг 2 — готовим инструкцию
+	q := fmt.Sprintf(`SELECT id FROM public.users WHERE  id = '%s';`, uris[0].Owner)
+	row := d.conn.QueryRow(q)
+
+	var s string
+	haveRows := row.Scan(&s)
+	if haveRows == sql.ErrNoRows {
+		insert := fmt.Sprintf(`INSERT INTO public.users (id) VALUES ('%s');`, uris[0].Owner)
+		_, err := tx.Exec(insert)
+		if err != nil {
+			log.Println(err.Error())
+			return errors.New("error while trying insert user")
+		}
+	}
+
+	defer tx.Rollback()
 
 	stmt, err := tx.PrepareContext(context.Background(), "INSERT INTO urls (id, orig_url, user_id) VALUES ($1,$2,$3)")
 	if err != nil {
-		log.Println("stms ->", err)
+		log.Println(err)
 		return err
 	}
-	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
 	defer stmt.Close()
 
 	for _, u := range uris {
-		// шаг 3 — указываем, что каждое видео будет добавлено в транзакцию
 		if _, err = stmt.ExecContext(context.Background(), u.Short, u.Orig, u.Owner); err != nil {
 			log.Println(err)
 			return err
 		}
 	}
-	// шаг 4 — сохраняем изменения
 	return tx.Commit()
 }
 
