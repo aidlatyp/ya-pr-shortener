@@ -2,6 +2,7 @@ package storage
 
 import (
 	"errors"
+	"log"
 	"sync"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
@@ -22,6 +23,7 @@ func NewURLMemoryStorage() *URLMemoryStorage {
 
 func (u *URLMemoryStorage) BatchWrite(urls []domain.URL) error {
 
+	log.Println("BATCH MEM")
 	for _, v := range urls {
 		u.Store(&v)
 	}

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
@@ -47,6 +48,8 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 }
 
 func (p *PersistentStorage) Store(url *domain.URL) error {
+	log.Println("BATCH FILE")
+
 	bytes, err := json.Marshal(url)
 	if err != nil {
 		return fmt.Errorf("error while marshaling data  %v ", err)

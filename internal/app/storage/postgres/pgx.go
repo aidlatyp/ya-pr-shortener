@@ -25,6 +25,7 @@ func NewDB(dsn string) (*DB, error) {
 }
 
 func (p *DB) BatchWrite(urls []domain.URL) error {
+	log.Println("BATCH BD")
 	return nil
 }
 
