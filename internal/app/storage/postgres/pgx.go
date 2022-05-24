@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -24,9 +25,40 @@ func NewDB(dsn string) (*DB, error) {
 	return &db, nil
 }
 
-func (p *DB) BatchWrite(urls []domain.URL) error {
-	log.Println("BATCH BD")
-	return nil
+func (d *DB) BatchWrite(uris []domain.URL) error {
+
+	//for _, v := range uris {
+	//	fmt.Println(v.Owner)
+	//}
+	//
+	// шаг 1 — объявляем транзакцию
+	tx, err := d.conn.Begin()
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	// шаг 1.1 — если возникает ошибка, откатываем изменения
+	defer tx.Rollback()
+
+	// шаг 2 — готовим инструкцию
+
+	stmt, err := tx.PrepareContext(context.Background(), "INSERT INTO urls (id, orig_url, user_id) VALUES ($1,$2,$3)")
+	if err != nil {
+		log.Println("stms ->", err)
+		return err
+	}
+	// шаг 2.1 — не забываем закрыть инструкцию, когда она больше не нужна
+	defer stmt.Close()
+
+	for _, u := range uris {
+		// шаг 3 — указываем, что каждое видео будет добавлено в транзакцию
+		if _, err = stmt.ExecContext(context.Background(), u.Short, u.Orig, u.Owner); err != nil {
+			log.Println(err)
+			return err
+		}
+	}
+	// шаг 4 — сохраняем изменения
+	return tx.Commit()
 }
 
 func (d *DB) Store(url *domain.URL) error {
@@ -47,6 +79,7 @@ func (d *DB) Store(url *domain.URL) error {
 
 	insert := fmt.Sprintf(`INSERT INTO "public"."urls"(id,        orig_url, user_id)
 						VALUES ('%s','%s','%s')`, url.Short, url.Orig, url.Owner)
+
 	_, err := d.conn.Exec(insert)
 	if err != nil {
 		log.Println(err.Error())
@@ -72,9 +105,13 @@ func (d *DB) FindByKey(id string) (*domain.URL, error) {
 	return &url, nil
 }
 
+//
 func (d *DB) FindAll(user string) []*domain.URL {
 
+	fmt.Println("fetch from db")
+
 	result := make([]*domain.URL, 0)
+	//var result []*domain.URL = nil
 
 	q := fmt.Sprintf(`SELECT id,orig_url, user_id FROM public.urls WHERE user_id = '%s';`, user)
 	rows, err := d.conn.Query(q)

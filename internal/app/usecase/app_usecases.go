@@ -18,7 +18,7 @@ type InputPort interface {
 	Shorten(string, string) string
 	RestoreOrigin(string) (string, error)
 	ShowAll(string) ([]*domain.URL, error)
-	ShortenBatch(input []Correlation) ([]OutputBatchItem, error)
+	ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error)
 }
 
 type Shorten struct {
@@ -46,21 +46,29 @@ type OutputBatchItem struct {
 	ShortURL      string `json:"short_url"`
 }
 
-func (s *Shorten) ShortenBatch(input []Correlation) ([]OutputBatchItem, error) {
+func (s *Shorten) ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error) {
 
 	output := make([]OutputBatchItem, 0)
+	urls := make([]domain.URL, 0)
 	for _, inputPair := range input {
 
 		url := s.shortener.MakeShort(inputPair.OriginalURL)
+		url.Owner = user
+
 		out := OutputBatchItem{
 			CorrelationID: inputPair.CorrelationID,
 			ShortURL:      url.Short,
 		}
+		urls = append(urls, *url)
 		output = append(output, out)
 	}
 
-	return output, nil
+	err := s.repo.BatchWrite(urls)
+	if err != nil {
+		return nil, err
+	}
 
+	return output, nil
 }
 
 func (s *Shorten) Shorten(url string, userID string) string {
@@ -91,7 +99,7 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 
 func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
 	list := s.repo.FindAll(user)
-	if list == nil {
+	if list == nil || len(list) < 1 {
 		return nil, fmt.Errorf("seems user %v do not have any links yet", user)
 	}
 	return list, nil

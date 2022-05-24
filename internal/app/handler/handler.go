@@ -78,9 +78,7 @@ func (a *AppRouter) infraRouter() {
 
 func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
 
-	log.Println("BATCH")
-
-	_, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(404)
 		return
@@ -98,7 +96,7 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 		log.Printf("cant unmarshal due to %v", err)
 	}
 
-	outputList, err := a.usecase.ShortenBatch(inputCollection)
+	outputList, err := a.usecase.ShortenBatch(inputCollection, ctxUserID)
 	for index := range outputList {
 		outputList[index].ShortURL = a.baseURL + outputList[index].ShortURL
 	}
@@ -128,6 +126,8 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
+
+	log.Println("fetch all foe user")
 
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {

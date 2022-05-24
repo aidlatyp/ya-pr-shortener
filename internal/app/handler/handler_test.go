@@ -36,6 +36,9 @@ func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 func (u *usecaseMock) ShowAll(_ string) ([]*domain.URL, error) {
 	return nil, nil
 }
+func (u *usecaseMock) ShortenBatch(input []usecase.Correlation, user string) ([]usecase.OutputBatchItem, error) {
+	return nil, nil
+}
 
 func TestAppHandler_HandleMain(t *testing.T) {
 	t.Run("Test Handler", func(t *testing.T) {
