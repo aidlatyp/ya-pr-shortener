@@ -68,6 +68,10 @@ func (p *PersistentStorage) FindAll(key string) []*domain.URL {
 	return p.cache.FindAll(key)
 }
 
+func (p *PersistentStorage) BatchWrite(urls []domain.URL) error {
+	return p.cache.BatchWrite(urls)
+}
+
 func (p *PersistentStorage) Close() error {
 	return p.file.Close()
 }

@@ -2,7 +2,6 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -93,20 +92,26 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 		return
 	}
 
-	type Correlation struct {
-		CorrelationID string `json:"correlation_id"`
-		OriginalURL   string `json:"original_url"`
-	}
-
-	inputCollection := make([]Correlation, 0)
+	inputCollection := make([]usecase.Correlation, 0)
 	err = json.Unmarshal(inputBytes, &inputCollection)
 	if err != nil {
 		log.Printf("cant unmarshal due to %v", err)
 	}
 
-	for k, v := range inputCollection {
-		fmt.Println(k, v)
+	outputList, err := a.usecase.ShortenBatch(inputCollection)
+
+	marshaled, _ := json.Marshal(outputList)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(200)
+
+	_, err = writer.Write(marshaled)
+	if err != nil {
+		log.Printf("error while writing answer: %v", err)
 	}
+
+	//for k, v := range inputCollection {
+	//	fmt.Println(k, v)
+	//}
 
 }
 

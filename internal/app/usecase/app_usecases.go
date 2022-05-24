@@ -11,12 +11,14 @@ type Repository interface {
 	Store(*domain.URL) error
 	FindByKey(string) (*domain.URL, error)
 	FindAll(string) []*domain.URL
+	BatchWrite([]domain.URL) error
 }
 
 type InputPort interface {
 	Shorten(string, string) string
 	RestoreOrigin(string) (string, error)
 	ShowAll(string) ([]*domain.URL, error)
+	ShortenBatch(input []Correlation) ([]OutputBatchItem, error)
 }
 
 type Shorten struct {
@@ -32,6 +34,33 @@ func NewShorten(
 		shortener: shortener,
 		repo:      repo,
 	}
+}
+
+type Correlation struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type OutputBatchItem struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"original_url"`
+}
+
+func (s *Shorten) ShortenBatch(input []Correlation) ([]OutputBatchItem, error) {
+
+	output := make([]OutputBatchItem, 0)
+	for _, inputPair := range input {
+
+		url := s.shortener.MakeShort(inputPair.OriginalURL)
+		out := OutputBatchItem{
+			CorrelationID: inputPair.CorrelationID,
+			ShortURL:      url.Short,
+		}
+		output = append(output, out)
+	}
+
+	return output, nil
+
 }
 
 func (s *Shorten) Shorten(url string, userID string) string {

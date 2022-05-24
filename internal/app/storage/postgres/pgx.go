@@ -24,6 +24,10 @@ func NewDB(dsn string) (*DB, error) {
 	return &db, nil
 }
 
+func (p *DB) BatchWrite(urls []domain.URL) error {
+	return nil
+}
+
 func (d *DB) Store(url *domain.URL) error {
 
 	// todo TX

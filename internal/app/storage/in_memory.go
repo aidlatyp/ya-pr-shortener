@@ -20,6 +20,10 @@ func NewURLMemoryStorage() *URLMemoryStorage {
 	}
 }
 
+func (u *URLMemoryStorage) BatchWrite([]domain.URL) error {
+	return nil
+}
+
 func (u *URLMemoryStorage) Store(url *domain.URL) error {
 	u.mutex.Lock()
 	defer u.mutex.Unlock()
