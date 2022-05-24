@@ -38,15 +38,21 @@ func main() {
 	}
 
 	// db
-	pg, err := postgres.NewDB(appConf.DBConnect)
-	if err != nil {
-		log.Printf("can't start database %v", err.Error())
-	}
-	defer func() {
-		if err := pg.Close(); err != nil {
-			log.Print(err)
+	var dbCheckUsecase *usecase.Liveliness
+	if appConf.DBConnect != "" {
+		pg, err := postgres.NewDB(appConf.DBConnect)
+		if err != nil {
+			log.Printf("can't start database %v", err.Error())
+		} else {
+			store = pg
+			defer func() {
+				if err := pg.Close(); err != nil {
+					log.Print(err)
+				}
+			}()
 		}
-	}()
+		dbCheckUsecase = usecase.NewLiveliness(pg)
+	}
 	// end db
 
 	// Domain
@@ -55,13 +61,13 @@ func main() {
 
 	// Usecases
 	shortenUsecase := usecase.NewShorten(shortener, store)
-	dbCheckUsecase := usecase.NewLiveliness(pg)
 
 	// Application Router
 	appRouter := handler.NewAppRouter(
 		appConf.BaseURL,
 		shortenUsecase,
-		dbCheckUsecase)
+		dbCheckUsecase,
+	)
 
 	// Start
 	server := http.Server{
@@ -74,6 +80,6 @@ func main() {
 
 	log.Printf("server starting at %v", appConf.ServerAddr)
 
-	err = server.ListenAndServe()
+	err := server.ListenAndServe()
 	log.Printf("server finished with: %v", err)
 }
