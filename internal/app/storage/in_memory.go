@@ -20,7 +20,12 @@ func NewURLMemoryStorage() *URLMemoryStorage {
 	}
 }
 
-func (u *URLMemoryStorage) BatchWrite([]domain.URL) error {
+func (u *URLMemoryStorage) BatchWrite(urls []domain.URL) error {
+
+	for _, v := range urls {
+		u.Store(&v)
+	}
+
 	return nil
 }
 
