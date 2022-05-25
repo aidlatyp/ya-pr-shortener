@@ -89,14 +89,7 @@ func (d *DB) Store(url *domain.URL) error {
 		return err
 	}
 
-	//insert := fmt.Sprintf(`INSERT INTO "public"."urls"(id,        orig_url, user_id)
-	//					VALUES ('%s','%s','%s')`, url.Short, url.Orig, url.Owner)
-
 	result := prep.QueryRowContext(context.Background(), url.Short, url.Orig, url.Owner)
-	if err != nil {
-		log.Println(err.Error())
-		return errors.New("error while trying insert url")
-	}
 
 	var id string
 	result.Scan(&id)
@@ -133,7 +126,6 @@ func (d *DB) FindAll(user string) []*domain.URL {
 	fmt.Println("fetch from db")
 
 	result := make([]*domain.URL, 0)
-	//var result []*domain.URL = nil
 
 	q := fmt.Sprintf(`SELECT id,orig_url, user_id FROM public.urls WHERE user_id = '%s';`, user)
 	rows, err := d.conn.Query(q)
