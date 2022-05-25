@@ -26,7 +26,10 @@ type usecaseMock struct {
 	e bool   // err
 }
 
-func (u *usecaseMock) Shorten(_ string, _ string) string { return u.s }
+func (u *usecaseMock) Shorten(_ string, _ string) (string, error) {
+
+	return u.s, nil
+}
 func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 	if u.e {
 		return "", errors.New("usecase error")
