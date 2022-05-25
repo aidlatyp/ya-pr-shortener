@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -81,13 +82,30 @@ func (d *DB) Store(url *domain.URL) error {
 		}
 	}
 
-	insert := fmt.Sprintf(`INSERT INTO "public"."urls"(id,        orig_url, user_id)
-						VALUES ('%s','%s','%s')`, url.Short, url.Orig, url.Owner)
+	prep, err := d.conn.PrepareContext(context.Background(), "INSERT INTO public.urls (id, orig_url, user_id)"+
+		" VALUES ($1, $2, $3) ON CONFLICT (user_id,orig_url) DO UPDATE SET orig_url=EXCLUDED.orig_url  RETURNING id")
+	if err != nil {
+		log.Printf("error preparing stmt %v", err)
+		return err
+	}
 
-	_, err := d.conn.Exec(insert)
+	//insert := fmt.Sprintf(`INSERT INTO "public"."urls"(id,        orig_url, user_id)
+	//					VALUES ('%s','%s','%s')`, url.Short, url.Orig, url.Owner)
+
+	result := prep.QueryRowContext(context.Background(), url.Short, url.Orig, url.Owner)
 	if err != nil {
 		log.Println(err.Error())
 		return errors.New("error while trying insert url")
+	}
+
+	var id string
+	result.Scan(&id)
+
+	if id != url.Short {
+		return usecase.ErrAlreadyExists{
+			Err:            errors.New("duplicate entry, given entity record already exists"),
+			ExistShortenID: id,
+		}
 	}
 	return nil
 }
@@ -169,6 +187,7 @@ func (d *DB) init() {
                                  orig_url TEXT NOT NULL,
                                  user_id TEXT NOT NULL,
                                  CONSTRAINT url_constraint PRIMARY KEY (id),
+                                 CONSTRAINT orig_url_constraint UNIQUE (user_id, orig_url),
                                  FOREIGN KEY (user_id) REFERENCES public.users (id));`)
 
 	if err != nil {

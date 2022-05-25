@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -98,6 +99,8 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 
 	outputList, err := a.usecase.ShortenBatch(inputCollection, ctxUserID)
 	if err != nil {
+		writer.WriteHeader(500)
+		return
 	}
 
 	for index := range outputList {
@@ -188,7 +191,21 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	}
 
 	if origURL, ok := input["url"]; ok {
-		id := a.usecase.Shorten(origURL, ctxUserID)
+		id, err := a.usecase.Shorten(origURL, ctxUserID)
+		if err != nil {
+			if errors.As(err, &usecase.ErrAlreadyExists{}) {
+				e := err.(usecase.ErrAlreadyExists)
+				id = e.ExistShortenID
+				writer.Header().Set("Content-Type", "text/plain")
+				writer.WriteHeader(409)
+				_, err = writer.Write([]byte(a.baseURL + id))
+				if err != nil {
+					log.Printf("error while writing answer: %v", err)
+				}
+				return
+			}
+		}
+
 		output := map[string]string{
 			"result": a.baseURL + id,
 		}
@@ -235,7 +252,20 @@ func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	id := a.usecase.Shorten(string(input), ctxUserID)
+	id, err := a.usecase.Shorten(string(input), ctxUserID)
+	if err != nil {
+		if errors.As(err, &usecase.ErrAlreadyExists{}) {
+			e := err.(usecase.ErrAlreadyExists)
+			id = e.ExistShortenID
+			writer.Header().Set("Content-Type", "text/plain")
+			writer.WriteHeader(409)
+			_, err = writer.Write([]byte(a.baseURL + id))
+			if err != nil {
+				log.Printf("error while writing answer: %v", err)
+			}
+			return
+		}
+	}
 
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(201)

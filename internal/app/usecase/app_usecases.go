@@ -1,8 +1,8 @@
 package usecase
 
 import (
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 )
@@ -15,7 +15,7 @@ type Repository interface {
 }
 
 type InputPort interface {
-	Shorten(string, string) string
+	Shorten(string, string) (string, error)
 	RestoreOrigin(string) (string, error)
 	ShowAll(string) ([]*domain.URL, error)
 	ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error)
@@ -71,7 +71,16 @@ func (s *Shorten) ShortenBatch(input []Correlation, user string) ([]OutputBatchI
 	return output, nil
 }
 
-func (s *Shorten) Shorten(url string, userID string) string {
+type ErrAlreadyExists struct {
+	Err            error
+	ExistShortenID string
+}
+
+func (e ErrAlreadyExists) Error() string {
+	return fmt.Sprintf("url %v already exists", e.ExistShortenID)
+}
+
+func (s *Shorten) Shorten(url string, userID string) (string, error) {
 	short := s.shortener.MakeShort(url)
 	var user *domain.User = nil
 	if userID != "" {
@@ -83,10 +92,15 @@ func (s *Shorten) Shorten(url string, userID string) string {
 
 	err := s.repo.Store(short)
 	if err != nil {
-		// process an error in the future
-		log.Println(err.Error())
+
+		fmt.Println(err.Error())
+
+		if errors.As(err, &ErrAlreadyExists{}) {
+			// process error
+			return "", err
+		}
 	}
-	return short.Short
+	return short.Short, nil
 }
 
 func (s *Shorten) RestoreOrigin(id string) (string, error) {
