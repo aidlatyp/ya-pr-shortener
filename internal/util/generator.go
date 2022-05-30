@@ -22,9 +22,11 @@ func generator(l int) []byte {
 
 // GenerateShorten generates random short bytes with exactly domain.ShortenedURLLen
 func GenerateShorten() domain.Shorten {
-	// the line below do not pass statictext, buth at the same time pass all other tests till inc13
-	// and work perfectly as local. The possible problem GO at the test environment lower 1.17
+	// the line below do not pass statictest, but at the same time pass all other tests till inc13
+	// and work perfectly as local. The possible problem GO environment
+	
 	//return *(*[domain.ShortenedURLLen]byte)(generator(domain.ShortenedURLLen))
+	
 	// fallback to use copy()
 	id := generator(domain.ShortenedURLLen)
 	var s domain.Shorten
