@@ -20,23 +20,18 @@ type PersistentStorage struct {
 
 func NewStorage(path string) usecase.Repository {
 
-	var store usecase.Repository = NewURLMemoryStorage()
+	var store usecase.Repository = newURLMemoryStorage()
 	if path != "" {
-		persistentStorage, err := NewPersistentStorage(path, store)
+		persistentStorage, err := newPersistentStorage(path, store)
 		if err != nil {
 			log.Fatalf("filepath set, but can't start in persistent mode %v ", err.Error())
 		}
-		//defer func() {
-		//	if err := persistentStorage.Close(); err != nil {
-		//		log.Print(err)
-		//	}
-		//}()
 		store = persistentStorage
 	}
 	return store
 }
 
-func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
+func newPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
 
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {

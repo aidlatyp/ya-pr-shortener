@@ -41,6 +41,13 @@ func main() {
 	pg, err := postgres.NewDB(appConf.DBConnect)
 	if err != nil {
 		log.Printf("can't start database due to: %v", err.Error())
+	} else {
+		store = pg
+		defer func() {
+			if err := pg.Close(); err != nil {
+				log.Print(err)
+			}
+		}()
 	}
 
 	// end db

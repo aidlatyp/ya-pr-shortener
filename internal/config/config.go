@@ -36,7 +36,7 @@ var appConfig *AppConfig = nil
 func NewAppConfig() *AppConfig {
 	if appConfig == nil {
 
-		appFlags := ParseFlags()
+		appFlags := parseFlags()
 
 		appConfig = &AppConfig{}
 		appConfig.Do(func() {
@@ -46,10 +46,6 @@ func NewAppConfig() *AppConfig {
 	}
 	return appConfig
 }
-
-//func (a *AppConfig) IsFilePathSet() bool {
-//	return a.FilePath != ""
-//}
 
 func (a *AppConfig) configure(appFlags FlagGetter) {
 

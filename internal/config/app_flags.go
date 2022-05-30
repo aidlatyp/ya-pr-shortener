@@ -28,15 +28,13 @@ func (p *AppFlags) DatabaseDSN() string {
 	return *p.databaseDSN
 }
 
-func ParseFlags() AppFlags {
+func parseFlags() AppFlags {
 
 	parsed := AppFlags{}
 	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
 	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")
 	parsed.fileName = pflag.StringP("f", "f", "", "Filename to store URLs")
 	parsed.databaseDSN = pflag.StringP("d", "d", "", "Connection string for DB")
-
 	pflag.Parse()
-
 	return parsed
 }
