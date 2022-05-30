@@ -22,7 +22,11 @@ func generator(l int) []byte {
 
 // GenerateShorten generates random short bytes with exactly domain.ShortenedURLLen
 func GenerateShorten() domain.Shorten {
-	return *(*[domain.ShortenedURLLen]byte)(generator(domain.ShortenedURLLen))
+	//return *(*[domain.ShortenedURLLen]byte)(generator(domain.ShortenedURLLen))
+	id := generator(domain.ShortenedURLLen)
+	var s domain.Shorten
+	copy(s[:], id)
+	return s
 }
 
 // genFunc function wrapper to satisfy the domain.Generator interface
