@@ -15,9 +15,7 @@ const secret = "secret"
 
 type key int
 
-const (
-	UserIDCtxKey key = iota
-)
+const UserIDCtxKey key = iota
 
 func registerUser(writer http.ResponseWriter) []byte {
 	userID := util.GenerateUserID()
@@ -41,23 +39,26 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		signedCookie, err := request.Cookie("user_id")
 
 		if err != nil {
-			// Register user silently
-			userID = registerUser(writer)
+
+			userID = registerUser(writer) // Register user silently
+
 		} else {
 
 			cookieBytes, err := hex.DecodeString(signedCookie.Value)
 			if err != nil {
 				log.Println(err)
 			}
+
 			userID = cookieBytes[:6]
 			incomeSign := cookieBytes[6:]
 			h := hmac.New(sha256.New, []byte(secret))
 			h.Write(userID)
-			controlSign := h.Sum(nil)
 
+			controlSign := h.Sum(nil)
 			if !hmac.Equal(incomeSign, controlSign) {
-				// Register user silently
-				userID = registerUser(writer)
+
+				userID = registerUser(writer) // Register user silently
+
 			}
 		}
 

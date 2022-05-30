@@ -27,7 +27,7 @@ func NewDB(dsn string) (*DB, error) {
 	}
 
 	db := DB{conn: conn}
-	db.init()
+	db.createTablesIfNotExits()
 
 	return &db, nil
 }
@@ -54,14 +54,14 @@ func (d *DB) BatchWrite(uris []domain.URL) error {
 
 	defer tx.Rollback()
 
-	stmt, err := tx.PrepareContext(context.Background(), "INSERT INTO urls (id, orig_url, user_id) VALUES ($1,$2,$3)")
+	stmt, err := tx.Prepare("INSERT INTO urls (id, orig_url, user_id) VALUES ($1,$2,$3)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	for _, u := range uris {
-		if _, err = stmt.ExecContext(context.Background(), u.Short, u.Orig, u.Owner); err != nil {
+		if _, err = stmt.Exec(u.Short, u.Orig, u.Owner); err != nil {
 			return err
 		}
 	}
@@ -84,7 +84,7 @@ func (d *DB) Store(url *domain.URL) error {
 		}
 	}
 
-	prep, err := d.conn.PrepareContext(context.Background(), "INSERT INTO public.urls (id, orig_url, user_id)"+
+	prep, err := d.conn.Prepare("INSERT INTO public.urls (id, orig_url, user_id)" +
 		" VALUES ($1, $2, $3) ON CONFLICT (user_id,orig_url) DO UPDATE SET orig_url=EXCLUDED.orig_url  RETURNING id")
 	if err != nil {
 		return err
@@ -99,6 +99,7 @@ func (d *DB) Store(url *domain.URL) error {
 		return usecase.ErrAlreadyExists{
 			Err:            errors.New("duplicate entry, given entity record already exists"),
 			ExistShortenID: id,
+			Orig:           url.Orig,
 		}
 	}
 	return nil
@@ -157,7 +158,7 @@ func (d *DB) Ping() error {
 	return d.conn.Ping()
 }
 
-func (d *DB) init() {
+func (d *DB) createTablesIfNotExits() {
 	_, err := d.conn.Exec(`CREATE TABLE IF NOT EXISTS public.users (
     											id TEXT NOT NULL,
 												CONSTRAINT user_constraint PRIMARY KEY (id));

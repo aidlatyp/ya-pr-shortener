@@ -29,7 +29,6 @@ func (p *AppFlags) DatabaseDSN() string {
 }
 
 func parseFlags() AppFlags {
-
 	parsed := AppFlags{}
 	parsed.addr = pflag.StringP("a", "a", "", "Host IP address")
 	parsed.baseURL = pflag.StringP("b", "b", "", "Base URL")

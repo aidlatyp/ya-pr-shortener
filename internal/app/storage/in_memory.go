@@ -16,9 +16,9 @@ type URLMemoryStorage struct {
 type uniqID string
 
 func newURLMemoryStorage() *URLMemoryStorage {
-	// Do not have duplications of URLs, full maps scan for any use cases, etc,
+	// Do not have duplications of URLs, do not fall into full maps scan for any use cases, etc,
 	// userLinks is map of slices, each slice is a list of refs (keys)
-	// to a user links in linksStorage map. To make this ref principle more explicit,
+	// to a users links in linksStorage map. To make this ref approach more explicit,
 	// redundant [uniqID] type declared
 	return &URLMemoryStorage{
 		userLinks:    make(map[string][]uniqID),

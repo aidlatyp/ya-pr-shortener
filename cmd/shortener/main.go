@@ -15,29 +15,13 @@ import (
 )
 
 func main() {
-
+	// configure from flags, env or by default
 	appConf := config.NewAppConfig()
 
+	// choose storage depending on if specified filepath or not
 	store := storage.NewStorage(appConf.FilePath)
 
-	// db
-	//var dbCheckUsecase *usecase.Liveliness
-	//
-	//if appConf.DBConnect != "" {
-	//	pg, err := postgres.NewDB(appConf.DBConnect)
-	//	if err != nil {
-	//		log.Printf("can't start database %v", err.Error())
-	//	} else {
-	//		store = pg
-	//		defer func() {
-	//			if err := pg.Close(); err != nil {
-	//				log.Print(err)
-	//			}
-	//		}()
-	//	}
-	//	dbCheckUsecase = usecase.NewLiveliness(pg)
-	//}
-
+	// connect database if connect string configured
 	pg, err := postgres.NewDB(appConf.DBConnect)
 	if err != nil {
 		log.Printf("can't start database due to: %v", err.Error())
@@ -50,15 +34,12 @@ func main() {
 		}()
 	}
 
-	// end db
-
 	// Domain
-	gen := util.GetGenerator()
+	gen := util.GetShortenGenerator()
 	shortener := domain.NewShortener(gen)
 
-	// Usecases
+	// Use_cases
 	shortenUsecase := usecase.NewShorten(shortener, store)
-
 	dbCheckUsecase := usecase.NewLiveliness(pg)
 
 	// Application Router

@@ -66,22 +66,32 @@ func (a *AppRouter) apiRouter() {
 	apiRouter.Get("/api/user/urls", a.handleUserURLs)
 	apiRouter.Post("/api/shorten/batch", a.handleBatch)
 
-	// Mount sub router to root router
+	// Mount sub router
 	a.Mount("/", apiRouter)
 }
 
 // infraRouter is a sub router which serve infrastructure endpoints
 func (a *AppRouter) infraRouter() {
+
 	infraRouter := chi.NewRouter()
 	infraRouter.Get("/", a.handlePing)
+	// Mount sub router
 	a.Mount("/ping", infraRouter)
+}
+
+func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
+	err := a.liveliness.Do()
+	if err != nil {
+		writer.WriteHeader(500)
+	}
+	writer.WriteHeader(200)
 }
 
 func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
 
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
-		writer.WriteHeader(404)
+		writer.WriteHeader(401)
 		return
 	}
 
@@ -115,29 +125,13 @@ func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Reques
 	if err != nil {
 		log.Printf("error while writing answer: %v", err)
 	}
-
-	//for k, v := range inputCollection {
-	//	fmt.Println(k, v)
-	//}
-
-}
-
-// Handlers
-func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
-	err := a.liveliness.Do()
-	if err != nil {
-		writer.WriteHeader(500)
-	}
-	writer.WriteHeader(200)
 }
 
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
 
-	log.Println("fetch all foe user")
-
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
-		writer.WriteHeader(404)
+		writer.WriteHeader(401)
 		return
 	}
 
@@ -147,14 +141,9 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	type Presentation struct {
-		ShortURL    string `json:"short_url"`
-		OriginalURL string `json:"original_url"`
-	}
-
-	outputList := make([]Presentation, 0, len(resultList))
+	outputList := make([]usecase.OutputUserLinksListItem, 0, len(resultList))
 	for _, v := range resultList {
-		p := Presentation{
+		p := usecase.OutputUserLinksListItem{
 			ShortURL:    a.baseURL + v.Short,
 			OriginalURL: v.Orig,
 		}
@@ -163,8 +152,6 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 	marshaled, _ := json.Marshal(outputList)
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(200)
-
 	_, err = writer.Write(marshaled)
 	if err != nil {
 		log.Printf("error while writing answer: %v", err)
@@ -174,8 +161,11 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
-	var ctxUserID string
-	ctxUserID, _ = request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(401)
+		return
+	}
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -183,6 +173,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
+	// A touch of a map approach instead of dto
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
@@ -193,12 +184,14 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	if origURL, ok := input["url"]; ok {
 
 		responseCode := 201
-
 		id, err := a.usecase.Shorten(origURL, ctxUserID)
 		if err != nil {
+			// This [ErrAlreadyExists] is an usecase layer error should
+			// have error message for user and error context
 			if errors.As(err, &usecase.ErrAlreadyExists{}) {
-				e := err.(usecase.ErrAlreadyExists)
-				id = e.ExistShortenID
+				errAlreadyExists := err.(usecase.ErrAlreadyExists)
+				id = errAlreadyExists.ExistShortenID
+				// show to user errAlreadyExists.Error() message...
 				responseCode = 409
 			}
 		}
@@ -228,7 +221,6 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request) {
 
 	id := chi.URLParam(request, "id")
-
 	response, err := a.usecase.RestoreOrigin(id)
 	if err != nil {
 		writer.WriteHeader(404)

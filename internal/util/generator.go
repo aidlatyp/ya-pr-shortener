@@ -9,33 +9,7 @@ import (
 
 const symbols = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-func Generate() domain.Shorten {
-	rand.Seed(time.Now().UnixNano())
-	var buf domain.Shorten
-	for i := range buf {
-		randomIndex := rand.Intn(len(symbols))
-		buf[i] = symbols[randomIndex]
-	}
-	return buf
-}
-
-// genFunc function wrapper to satisfy the Generator interface
-type genFunc func() domain.Shorten
-
-func (gf genFunc) Generate() domain.Shorten {
-	return gf()
-}
-
-func GetGenerator() domain.Generator {
-	return genFunc(Generate)
-}
-
-// GenerateUserID todo: remove
-func GenerateUserID() []byte {
-	id := generator(6)
-	return id
-}
-
+// generator utility source of random bytes
 func generator(l int) []byte {
 	rand.Seed(time.Now().UnixNano())
 	buf := make([]byte, l)
@@ -44,4 +18,25 @@ func generator(l int) []byte {
 		buf[i] = symbols[randomIndex]
 	}
 	return buf
+}
+
+// GenerateShorten generates random short bytes with exactly domain.ShortenedURLLen
+func GenerateShorten() domain.Shorten {
+	return *(*[domain.ShortenedURLLen]byte)(generator(domain.ShortenedURLLen))
+}
+
+// genFunc function wrapper to satisfy the domain.Generator interface
+type genFunc func() domain.Shorten
+
+func (gf genFunc) Generate() domain.Shorten {
+	return gf()
+}
+
+func GetShortenGenerator() domain.Generator {
+	return genFunc(GenerateShorten)
+}
+
+// GenerateUserID generate bytes to represent user id
+func GenerateUserID() []byte {
+	return generator(6)
 }

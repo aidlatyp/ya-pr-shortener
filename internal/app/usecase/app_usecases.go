@@ -26,24 +26,11 @@ type Shorten struct {
 	repo      Repository
 }
 
-func NewShorten(
-	shortener *domain.Shortener,
-	repo Repository,
-) *Shorten {
+func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
 	return &Shorten{
 		shortener: shortener,
 		repo:      repo,
 	}
-}
-
-type Correlation struct {
-	CorrelationID string `json:"correlation_id"`
-	OriginalURL   string `json:"original_url"`
-}
-
-type OutputBatchItem struct {
-	CorrelationID string `json:"correlation_id"`
-	ShortURL      string `json:"short_url"`
 }
 
 func (s *Shorten) ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error) {
@@ -71,15 +58,6 @@ func (s *Shorten) ShortenBatch(input []Correlation, user string) ([]OutputBatchI
 	return output, nil
 }
 
-type ErrAlreadyExists struct {
-	Err            error
-	ExistShortenID string
-}
-
-func (e ErrAlreadyExists) Error() string {
-	return fmt.Sprintf("url %v already exists", e.ExistShortenID)
-}
-
 func (s *Shorten) Shorten(url string, userID string) (string, error) {
 	short := s.shortener.MakeShort(url)
 	var user *domain.User = nil
@@ -92,11 +70,7 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 
 	err := s.repo.Store(short)
 	if err != nil {
-
-		fmt.Println(err.Error())
-
 		if errors.As(err, &ErrAlreadyExists{}) {
-			// process error
 			return "", err
 		}
 	}
@@ -114,7 +88,7 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
 	list := s.repo.FindAll(user)
 	if list == nil || len(list) < 1 {
-		return nil, fmt.Errorf("seems user %v do not have any links yet", user)
+		return nil, fmt.Errorf("seems you %v do not have any shortened links yet", user)
 	}
 	return list, nil
 }
