@@ -18,6 +18,24 @@ type PersistentStorage struct {
 	file  *os.File
 }
 
+func NewStorage(path string) usecase.Repository {
+
+	var store usecase.Repository = NewURLMemoryStorage()
+	if path != "" {
+		persistentStorage, err := NewPersistentStorage(path, store)
+		if err != nil {
+			log.Fatalf("filepath set, but can't start in persistent mode %v ", err.Error())
+		}
+		//defer func() {
+		//	if err := persistentStorage.Close(); err != nil {
+		//		log.Print(err)
+		//	}
+		//}()
+		store = persistentStorage
+	}
+	return store
+}
+
 func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
 
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
@@ -48,8 +66,6 @@ func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentSto
 }
 
 func (p *PersistentStorage) Store(url *domain.URL) error {
-	log.Println("BATCH FILE")
-
 	bytes, err := json.Marshal(url)
 	if err != nil {
 		return fmt.Errorf("error while marshaling data  %v ", err)

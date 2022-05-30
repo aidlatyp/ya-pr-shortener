@@ -16,26 +16,28 @@ import (
 
 func main() {
 
-	flags := config.ParseFlags()
-	appConf := config.NewAppConfig(&flags)
+	//flags := config.ParseFlags() // &flags
+	appConf := config.NewAppConfig()
 
 	// anyway need in-memory as main storage or as a cache
-	var store usecase.Repository = storage.NewURLMemoryStorage()
+	//var store usecase.Repository = storage.NewURLMemoryStorage()
 
 	// Configuration and main is relatively simple right now
 	// later if size will grow up - move to separate app struct
-	if appConf.IsFilePathSet() {
-		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
-		if err != nil {
-			log.Fatalf("can't start in persistent mode %v ", err.Error())
-		}
-		defer func() {
-			if err := persistentStorage.Close(); err != nil {
-				log.Print(err)
-			}
-		}()
-		store = persistentStorage
-	}
+	//if appConf.IsFilePathSet() {
+	//	persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
+	//	if err != nil {
+	//		log.Fatalf("can't start in persistent mode %v ", err.Error())
+	//	}
+	//	defer func() {
+	//		if err := persistentStorage.Close(); err != nil {
+	//			log.Print(err)
+	//		}
+	//	}()
+	//	store = persistentStorage
+	//}
+
+	store := storage.NewStorage(appConf.FilePath)
 
 	// db
 	var dbCheckUsecase *usecase.Liveliness
