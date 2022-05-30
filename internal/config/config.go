@@ -33,19 +33,18 @@ type FlagGetter interface {
 // Configuration Singleton (?)
 var appConfig *AppConfig = nil
 
-func NewAppConfig(appFlags FlagGetter) *AppConfig {
+func NewAppConfig() *AppConfig {
 	if appConfig == nil {
+
+		appFlags := parseFlags()
+
 		appConfig = &AppConfig{}
 		appConfig.Do(func() {
-			appConfig.configure(appFlags)
+			appConfig.configure(&appFlags)
 		})
 		return appConfig
 	}
 	return appConfig
-}
-
-func (a *AppConfig) IsFilePathSet() bool {
-	return a.FilePath != ""
 }
 
 func (a *AppConfig) configure(appFlags FlagGetter) {

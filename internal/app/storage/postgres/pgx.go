@@ -1,12 +1,14 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
 	"log"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
+	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -15,63 +17,115 @@ type DB struct {
 }
 
 func NewDB(dsn string) (*DB, error) {
+	if dsn == "" {
+		return nil, errors.New("invalid connection string")
+	}
+
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
+
 	db := DB{conn: conn}
-	db.init()
+	db.createTablesIfNotExits()
+
 	return &db, nil
 }
 
-func (d *DB) Store(url *domain.URL) error {
-	// todo TX
-	q := fmt.Sprintf(`SELECT id FROM public.users WHERE  id = '%s';`, url.Owner)
-	row := d.conn.QueryRow(q)
+func (d *DB) BatchWrite(uris []domain.URL) error {
+
+	tx, err := d.conn.Begin()
+	if err != nil {
+		return err
+	}
+
+	query := `SELECT id FROM public.users WHERE  id = $1 `
+	row := d.conn.QueryRow(query, uris[0].Owner)
+
 	var s string
 	haveRows := row.Scan(&s)
 	if haveRows == sql.ErrNoRows {
-		insert := fmt.Sprintf(`INSERT INTO public.users (id) VALUES ('%s');`, url.Owner)
-		_, err := d.conn.Exec(insert)
+		insert := `INSERT INTO public.users (id) VALUES ($1);`
+		_, err := tx.Exec(insert, uris[0].Owner)
+		if err != nil {
+			return errors.New("error while trying insert user")
+		}
+	}
+
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT INTO urls (id, orig_url, user_id) VALUES ($1,$2,$3)")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, u := range uris {
+		if _, err = stmt.Exec(u.Short, u.Orig, u.Owner); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (d *DB) Store(url *domain.URL) error {
+
+	// todo wrap into TX
+	query := `SELECT id FROM public.users WHERE  id = $1`
+	row := d.conn.QueryRow(query, url.Owner)
+	var s string
+	haveRows := row.Scan(&s)
+	if haveRows == sql.ErrNoRows {
+		insert := `INSERT INTO public.users (id) VALUES ($1);`
+		_, err := d.conn.Exec(insert, url.Owner)
 		if err != nil {
 			log.Println(err.Error())
 			return errors.New("error while trying insert user")
 		}
 	}
 
-	insert := fmt.Sprintf(`INSERT INTO "public"."urls"(id,        orig_url, user_id)
-						VALUES ('%s','%s','%s')`, url.Short, url.Orig, url.Owner)
-	_, err := d.conn.Exec(insert)
+	prep, err := d.conn.Prepare("INSERT INTO public.urls (id, orig_url, user_id)" +
+		" VALUES ($1, $2, $3) ON CONFLICT (user_id,orig_url) DO UPDATE SET orig_url=EXCLUDED.orig_url  RETURNING id")
 	if err != nil {
-		log.Println(err.Error())
-		return errors.New("error while trying insert url")
+		return err
+	}
+
+	result := prep.QueryRowContext(context.Background(), url.Short, url.Orig, url.Owner)
+
+	var id string
+	result.Scan(&id)
+
+	if id != url.Short {
+		return usecase.ErrAlreadyExists{
+			Err:            errors.New("duplicate entry, given entity record already exists"),
+			ExistShortenID: id,
+			Orig:           url.Orig,
+		}
 	}
 	return nil
 }
 
-func (d *DB) FindByKey(id string) (*domain.URL, error) {
+func (d *DB) FindByKey(key string) (*domain.URL, error) {
 
-	q := fmt.Sprintf(`SELECT id,orig_url, user_id FROM public.urls WHERE id = '%s';`, id)
-	row := d.conn.QueryRow(q)
+	query := `SELECT id,orig_url,user_id FROM public.urls WHERE id = $1;`
+	row := d.conn.QueryRow(query, key)
 	url := domain.URL{}
 	err := row.Scan(&url.Short, &url.Orig, &url.Owner)
 	if err != nil {
-		fmt.Println("NIL")
 		if err == sql.ErrNoRows {
-			fmt.Println("NOT FOUND")
-			return nil, fmt.Errorf("key %v not exists", id)
+			return nil, fmt.Errorf("key %v not exists", key)
 		}
 		return nil, err
 	}
 	return &url, nil
 }
 
-func (d *DB) FindAll(user string) []*domain.URL {
+func (d *DB) FindAll(key string) []*domain.URL {
 
 	result := make([]*domain.URL, 0)
+	query := "SELECT id,orig_url, user_id FROM public.urls WHERE user_id = $1;"
 
-	q := fmt.Sprintf(`SELECT id,orig_url, user_id FROM public.urls WHERE user_id = '%s';`, user)
-	rows, err := d.conn.Query(q)
+	rows, err := d.conn.Query(query, key)
 	if err != nil {
 		return result
 	}
@@ -97,22 +151,14 @@ func (d *DB) FindAll(user string) []*domain.URL {
 }
 
 func (d *DB) Close() error {
-	err := d.conn.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return d.conn.Close()
 }
 
 func (d *DB) Ping() error {
-	err := d.conn.Ping()
-	if err != nil {
-		return err
-	}
-	return nil
+	return d.conn.Ping()
 }
 
-func (d *DB) init() {
+func (d *DB) createTablesIfNotExits() {
 	_, err := d.conn.Exec(`CREATE TABLE IF NOT EXISTS public.users (
     											id TEXT NOT NULL,
 												CONSTRAINT user_constraint PRIMARY KEY (id));
@@ -122,8 +168,8 @@ func (d *DB) init() {
                                  orig_url TEXT NOT NULL,
                                  user_id TEXT NOT NULL,
                                  CONSTRAINT url_constraint PRIMARY KEY (id),
+                                 CONSTRAINT orig_url_constraint UNIQUE (user_id, orig_url),
                                  FOREIGN KEY (user_id) REFERENCES public.users (id));`)
-
 	if err != nil {
 		log.Println(err.Error())
 	}

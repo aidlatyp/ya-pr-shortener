@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -63,8 +64,9 @@ func (a *AppRouter) apiRouter() {
 	// api
 	apiRouter.Post("/api/shorten", a.handleShorten)
 	apiRouter.Get("/api/user/urls", a.handleUserURLs)
+	apiRouter.Post("/api/shorten/batch", a.handleBatch)
 
-	// Mount sub router to root router
+	// Mount sub router
 	a.Mount("/", apiRouter)
 }
 
@@ -73,10 +75,11 @@ func (a *AppRouter) infraRouter() {
 
 	infraRouter := chi.NewRouter()
 	infraRouter.Get("/", a.handlePing)
+	// Mount sub router
 	a.Mount("/ping", infraRouter)
 }
 
-func (a *AppRouter) handlePing(writer http.ResponseWriter, request *http.Request) {
+func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 	err := a.liveliness.Do()
 	if err != nil {
 		writer.WriteHeader(500)
@@ -84,12 +87,51 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, request *http.Request
 	writer.WriteHeader(200)
 }
 
-// Handlers
+func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
+
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(401)
+		return
+	}
+
+	inputBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		writer.WriteHeader(400)
+		return
+	}
+
+	inputCollection := make([]usecase.Correlation, 0)
+	err = json.Unmarshal(inputBytes, &inputCollection)
+	if err != nil {
+		log.Printf("cant unmarshal due to %v", err)
+	}
+
+	outputList, err := a.usecase.ShortenBatch(inputCollection, ctxUserID)
+	if err != nil {
+		writer.WriteHeader(500)
+		return
+	}
+
+	for index := range outputList {
+		outputList[index].ShortURL = a.baseURL + outputList[index].ShortURL
+	}
+
+	marshaled, _ := json.Marshal(outputList)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(201)
+
+	_, err = writer.Write(marshaled)
+	if err != nil {
+		log.Printf("error while writing answer: %v", err)
+	}
+}
+
 func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Request) {
 
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
-		writer.WriteHeader(404)
+		writer.WriteHeader(401)
 		return
 	}
 
@@ -99,15 +141,9 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	type Presentation struct {
-		ShortURL    string `json:"short_url"`
-		OriginalURL string `json:"original_url"`
-	}
-
-	outputList := make([]Presentation, 0, len(resultList))
-
+	outputList := make([]usecase.OutputUserLinksListItem, 0, len(resultList))
 	for _, v := range resultList {
-		p := Presentation{
+		p := usecase.OutputUserLinksListItem{
 			ShortURL:    a.baseURL + v.Short,
 			OriginalURL: v.Orig,
 		}
@@ -115,10 +151,7 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 	}
 
 	marshaled, _ := json.Marshal(outputList)
-
 	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(200)
-
 	_, err = writer.Write(marshaled)
 	if err != nil {
 		log.Printf("error while writing answer: %v", err)
@@ -128,8 +161,11 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
 
-	var ctxUserID string
-	ctxUserID, _ = request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(401)
+		return
+	}
 
 	inputBytes, err := io.ReadAll(request.Body)
 	if err != nil {
@@ -137,6 +173,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
+	// A touch of a map approach instead of dto
 	input := make(map[string]string, 1)
 	err = json.Unmarshal(inputBytes, &input)
 	if err != nil {
@@ -145,7 +182,20 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 	}
 
 	if origURL, ok := input["url"]; ok {
-		id := a.usecase.Shorten(origURL, ctxUserID)
+
+		responseCode := 201
+		id, err := a.usecase.Shorten(origURL, ctxUserID)
+		if err != nil {
+			// This [ErrAlreadyExists] is an usecase layer error should
+			// have error message for user and error context
+			if errors.As(err, &usecase.ErrAlreadyExists{}) {
+				errAlreadyExists := err.(usecase.ErrAlreadyExists)
+				id = errAlreadyExists.ExistShortenID
+				// show to user errAlreadyExists.Error() message...
+				responseCode = 409
+			}
+		}
+
 		output := map[string]string{
 			"result": a.baseURL + id,
 		}
@@ -156,7 +206,7 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 		}
 
 		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(201)
+		writer.WriteHeader(responseCode)
 		_, err = writer.Write(marshalled)
 		if err != nil {
 			log.Printf("error while writing answer: %v", err)
@@ -171,7 +221,6 @@ func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Requ
 func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request) {
 
 	id := chi.URLParam(request, "id")
-
 	response, err := a.usecase.RestoreOrigin(id)
 	if err != nil {
 		writer.WriteHeader(404)
@@ -192,7 +241,20 @@ func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request
 		return
 	}
 
-	id := a.usecase.Shorten(string(input), ctxUserID)
+	id, err := a.usecase.Shorten(string(input), ctxUserID)
+	if err != nil {
+		if errors.As(err, &usecase.ErrAlreadyExists{}) {
+			e := err.(usecase.ErrAlreadyExists)
+			id = e.ExistShortenID
+			writer.Header().Set("Content-Type", "text/plain")
+			writer.WriteHeader(409)
+			_, err = writer.Write([]byte(a.baseURL + id))
+			if err != nil {
+				log.Printf("error while writing answer: %v", err)
+			}
+			return
+		}
+	}
 
 	writer.Header().Set("Content-Type", "text/plain")
 	writer.WriteHeader(201)

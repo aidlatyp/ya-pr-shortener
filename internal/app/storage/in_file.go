@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
@@ -17,7 +18,20 @@ type PersistentStorage struct {
 	file  *os.File
 }
 
-func NewPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
+func NewStorage(path string) usecase.Repository {
+
+	var store usecase.Repository = newURLMemoryStorage()
+	if path != "" {
+		persistentStorage, err := newPersistentStorage(path, store)
+		if err != nil {
+			log.Fatalf("filepath set, but can't start in persistent mode %v ", err.Error())
+		}
+		store = persistentStorage
+	}
+	return store
+}
+
+func newPersistentStorage(path string, cache usecase.Repository) (*PersistentStorage, error) {
 
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -66,6 +80,10 @@ func (p *PersistentStorage) FindByKey(key string) (*domain.URL, error) {
 
 func (p *PersistentStorage) FindAll(key string) []*domain.URL {
 	return p.cache.FindAll(key)
+}
+
+func (p *PersistentStorage) BatchWrite(urls []domain.URL) error {
+	return p.cache.BatchWrite(urls)
 }
 
 func (p *PersistentStorage) Close() error {

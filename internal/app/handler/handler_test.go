@@ -26,7 +26,10 @@ type usecaseMock struct {
 	e bool   // err
 }
 
-func (u *usecaseMock) Shorten(_ string, _ string) string { return u.s }
+func (u *usecaseMock) Shorten(_ string, _ string) (string, error) {
+
+	return u.s, nil
+}
 func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 	if u.e {
 		return "", errors.New("usecase error")
@@ -34,6 +37,9 @@ func (u *usecaseMock) RestoreOrigin(_ string) (string, error) {
 	return u.o, nil
 }
 func (u *usecaseMock) ShowAll(_ string) ([]*domain.URL, error) {
+	return nil, nil
+}
+func (u *usecaseMock) ShortenBatch(input []usecase.Correlation, user string) ([]usecase.OutputBatchItem, error) {
 	return nil, nil
 }
 

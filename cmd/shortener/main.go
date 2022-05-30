@@ -15,52 +15,32 @@ import (
 )
 
 func main() {
+	// configure from flags, env or by default
+	appConf := config.NewAppConfig()
 
-	flags := config.ParseFlags()
-	appConf := config.NewAppConfig(&flags)
+	// choose storage depending on if specified filepath or not
+	store := storage.NewStorage(appConf.FilePath)
 
-	// anyway need in-memory as main storage or as a cache
-	var store usecase.Repository = storage.NewURLMemoryStorage()
-
-	// Configuration and main is relatively simple right now
-	// later if size will grow up - move to separate app struct
-	if appConf.IsFilePathSet() {
-		persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
-		if err != nil {
-			log.Fatalf("can't start in persistent mode %v ", err.Error())
-		}
+	// connect database if connect string configured
+	pg, err := postgres.NewDB(appConf.DBConnect)
+	if err != nil {
+		log.Printf("can't start database due to: %v", err.Error())
+	} else {
+		store = pg
 		defer func() {
-			if err := persistentStorage.Close(); err != nil {
+			if err := pg.Close(); err != nil {
 				log.Print(err)
 			}
 		}()
-		store = persistentStorage
 	}
-
-	// db
-	var dbCheckUsecase *usecase.Liveliness
-	if appConf.DBConnect != "" {
-		pg, err := postgres.NewDB(appConf.DBConnect)
-		if err != nil {
-			log.Printf("can't start database %v", err.Error())
-		} else {
-			store = pg
-			defer func() {
-				if err := pg.Close(); err != nil {
-					log.Print(err)
-				}
-			}()
-		}
-		dbCheckUsecase = usecase.NewLiveliness(pg)
-	}
-	// end db
 
 	// Domain
-	gen := util.GetGenerator()
+	gen := util.GetShortenGenerator()
 	shortener := domain.NewShortener(gen)
 
-	// Usecases
+	// Use_cases
 	shortenUsecase := usecase.NewShorten(shortener, store)
+	dbCheckUsecase := usecase.NewLiveliness(pg)
 
 	// Application Router
 	appRouter := handler.NewAppRouter(
@@ -77,9 +57,8 @@ func main() {
 		ReadTimeout:       time.Duration(appConf.ServerTimeout) * time.Second,
 		WriteTimeout:      time.Duration(appConf.ServerTimeout) * time.Second,
 	}
+	log.Printf("server is starting at %v", appConf.ServerAddr)
 
-	log.Printf("server starting at %v", appConf.ServerAddr)
-
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	log.Printf("server finished with: %v", err)
 }

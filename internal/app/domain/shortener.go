@@ -4,11 +4,11 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/config"
 )
 
-const shortenedURLLen = config.ShortenedURLLen
+const ShortenedURLLen = config.ShortenedURLLen
 
 // Shorten restricts the generator return type
 // by exact shortenedUrlLen number of elements
-type Shorten [shortenedURLLen]byte
+type Shorten [ShortenedURLLen]byte
 
 // Generator is an interface used by Shortener to create a random strings
 // and do not depend on concrete random generation algorithm
