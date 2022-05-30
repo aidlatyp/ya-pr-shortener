@@ -17,12 +17,18 @@ type DB struct {
 }
 
 func NewDB(dsn string) (*DB, error) {
+	if dsn == "" {
+		return nil, errors.New("invalid connection string")
+	}
+
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
 	}
+
 	db := DB{conn: conn}
 	db.init()
+
 	return &db, nil
 }
 

@@ -16,45 +16,33 @@ import (
 
 func main() {
 
-	//flags := config.ParseFlags() // &flags
 	appConf := config.NewAppConfig()
-
-	// anyway need in-memory as main storage or as a cache
-	//var store usecase.Repository = storage.NewURLMemoryStorage()
-
-	// Configuration and main is relatively simple right now
-	// later if size will grow up - move to separate app struct
-	//if appConf.IsFilePathSet() {
-	//	persistentStorage, err := storage.NewPersistentStorage(appConf.FilePath, store)
-	//	if err != nil {
-	//		log.Fatalf("can't start in persistent mode %v ", err.Error())
-	//	}
-	//	defer func() {
-	//		if err := persistentStorage.Close(); err != nil {
-	//			log.Print(err)
-	//		}
-	//	}()
-	//	store = persistentStorage
-	//}
 
 	store := storage.NewStorage(appConf.FilePath)
 
 	// db
-	var dbCheckUsecase *usecase.Liveliness
-	if appConf.DBConnect != "" {
-		pg, err := postgres.NewDB(appConf.DBConnect)
-		if err != nil {
-			log.Printf("can't start database %v", err.Error())
-		} else {
-			store = pg
-			defer func() {
-				if err := pg.Close(); err != nil {
-					log.Print(err)
-				}
-			}()
-		}
-		dbCheckUsecase = usecase.NewLiveliness(pg)
+	//var dbCheckUsecase *usecase.Liveliness
+	//
+	//if appConf.DBConnect != "" {
+	//	pg, err := postgres.NewDB(appConf.DBConnect)
+	//	if err != nil {
+	//		log.Printf("can't start database %v", err.Error())
+	//	} else {
+	//		store = pg
+	//		defer func() {
+	//			if err := pg.Close(); err != nil {
+	//				log.Print(err)
+	//			}
+	//		}()
+	//	}
+	//	dbCheckUsecase = usecase.NewLiveliness(pg)
+	//}
+
+	pg, err := postgres.NewDB(appConf.DBConnect)
+	if err != nil {
+		log.Printf("can't start database due to: %v", err.Error())
 	}
+
 	// end db
 
 	// Domain
@@ -63,6 +51,8 @@ func main() {
 
 	// Usecases
 	shortenUsecase := usecase.NewShorten(shortener, store)
+
+	dbCheckUsecase := usecase.NewLiveliness(pg)
 
 	// Application Router
 	appRouter := handler.NewAppRouter(
@@ -79,9 +69,8 @@ func main() {
 		ReadTimeout:       time.Duration(appConf.ServerTimeout) * time.Second,
 		WriteTimeout:      time.Duration(appConf.ServerTimeout) * time.Second,
 	}
+	log.Printf("server is starting at %v", appConf.ServerAddr)
 
-	log.Printf("server starting at %v", appConf.ServerAddr)
-
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	log.Printf("server finished with: %v", err)
 }

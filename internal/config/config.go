@@ -34,10 +34,10 @@ type FlagGetter interface {
 var appConfig *AppConfig = nil
 
 func NewAppConfig() *AppConfig {
-
-	appFlags := ParseFlags()
-
 	if appConfig == nil {
+
+		appFlags := ParseFlags()
+
 		appConfig = &AppConfig{}
 		appConfig.Do(func() {
 			appConfig.configure(&appFlags)
