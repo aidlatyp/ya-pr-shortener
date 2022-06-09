@@ -36,6 +36,7 @@ func NewDB(dsn string) (*DB, error) {
 func (d *DB) BatchDelete(urls []string, id string) error {
 
 	fmt.Println("batch db")
+	fmt.Println(id)
 
 	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
 
