@@ -73,7 +73,10 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 
 	err := s.repo.Store(short)
 	if err != nil {
+
 		if errors.As(err, &ErrAlreadyExists{}) {
+			// process error at this layer if needed
+			// i.e set user-friendly message
 			return "", err
 		}
 	}
@@ -85,6 +88,8 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 	url, err := s.repo.FindByKey(id)
 	if err != nil {
 		if errors.As(err, &ErrURLDeleted{}) {
+			// process error at this layer if needed
+			// i.e set user-friendly message
 			return "", err
 		}
 		return "", err
@@ -96,7 +101,8 @@ func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
 	fmt.Println("usecase del")
 	err := s.repo.BatchDelete(delIDs, user)
 	if err != nil {
-		// process
+		// process error at this layer if needed
+		// i.e set user-friendly message
 		log.Print("error deleting", err)
 	}
 	return nil
@@ -105,6 +111,8 @@ func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
 func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
 	list := s.repo.FindAll(user)
 	if list == nil || len(list) < 1 {
+		// process error at this layer if needed
+		// i.e set user-friendly message
 		return nil, fmt.Errorf("seems you %v do not have any shortened links yet", user)
 	}
 	return list, nil

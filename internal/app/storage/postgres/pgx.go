@@ -21,7 +21,6 @@ func NewDB(dsn string) (*DB, error) {
 	if dsn == "" {
 		return nil, errors.New("invalid connection string")
 	}
-
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -35,16 +34,11 @@ func NewDB(dsn string) (*DB, error) {
 
 func (d *DB) BatchDelete(urls []string, id string) error {
 
-	fmt.Println("batch db")
-	fmt.Println(id)
-
-	fmt.Println(len(urls))
-
 	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
 
 	stmt, err := d.conn.Prepare(query)
 	if err != nil {
-		fmt.Println("error stmt", err)
+		return fmt.Errorf("error while prepare stmt: %v", err)
 	}
 	defer func(stmt *sql.Stmt) {
 		err := stmt.Close()
@@ -54,7 +48,6 @@ func (d *DB) BatchDelete(urls []string, id string) error {
 	}(stmt)
 
 	if _, err = stmt.Exec(pq.Array(urls), id); err != nil {
-		fmt.Println("batch db -> ", err)
 		return err
 	}
 	return nil
@@ -154,7 +147,6 @@ func (d *DB) FindByKey(key string) (*domain.URL, error) {
 			ShortID: key,
 		}
 	}
-
 	return &url, nil
 }
 

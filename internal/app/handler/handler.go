@@ -275,9 +275,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 }
 
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
-
 	ctxUserID, _ := request.Context().Value(appMiddle.UserIDCtxKey).(string)
-
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {
 		writer.WriteHeader(400)
@@ -297,6 +295,8 @@ func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request
 			}
 			return
 		}
+		writer.WriteHeader(500)
+		return
 	}
 
 	writer.Header().Set("Content-Type", "text/plain")

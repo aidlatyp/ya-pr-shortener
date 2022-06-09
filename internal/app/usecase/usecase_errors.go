@@ -27,13 +27,14 @@ func (e ErrAlreadyExists) Pretty() string {
 type ErrURLDeleted struct {
 	Err       error
 	ShortID   string
+	Orig      string
 	PrettyMsg string
 }
 
 func (e ErrURLDeleted) Error() string {
-	return fmt.Sprintf("short key id  %v marked deleted", e.ShortID)
+	return fmt.Sprintf("short key id  %v marked deleted, original is %v", e.ShortID, e.Orig)
 }
 
 func (e ErrURLDeleted) Pretty() string {
-	return fmt.Sprint("Unfortunately, requested url was already been deleted")
+	return "Unfortunately, requested url was already been deleted"
 }
