@@ -24,3 +24,12 @@ func (e ErrAlreadyExists) Pretty() string {
 	// Could be a message from PrettyMsg in real
 	return fmt.Sprintf("Sorry, you have already saved this url %v ", e.Orig)
 }
+
+type ErrURLDeleted struct {
+	Err     error
+	ShortID string
+}
+
+func (e ErrURLDeleted) Error() string {
+	return fmt.Sprintf("short key id  %v marked deleted", e.ShortID)
+}

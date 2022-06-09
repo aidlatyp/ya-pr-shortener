@@ -76,3 +76,7 @@ func (u *URLMemoryStorage) FindAll(userKey string) []*domain.URL {
 
 	return resultList
 }
+
+func (p *URLMemoryStorage) BatchDelete([]string, string) error {
+	return errors.New("not supported")
+}

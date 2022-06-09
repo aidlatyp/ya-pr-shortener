@@ -10,6 +10,7 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/lib/pq"
 )
 
 type DB struct {
@@ -30,6 +31,20 @@ func NewDB(dsn string) (*DB, error) {
 	db.createTablesIfNotExits()
 
 	return &db, nil
+}
+
+func (d *DB) BatchDelete(urls []string, id string) error {
+
+	fmt.Println("batch db")
+
+	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
+	stmt, err := d.conn.Prepare(query)
+	defer stmt.Close()
+
+	if _, err = stmt.Exec(pq.Array(urls), id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *DB) BatchWrite(uris []domain.URL) error {

@@ -3,6 +3,7 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 )
@@ -12,6 +13,7 @@ type Repository interface {
 	FindByKey(string) (*domain.URL, error)
 	FindAll(string) []*domain.URL
 	BatchWrite([]domain.URL) error
+	BatchDelete([]string, string) error
 }
 
 type InputPort interface {
@@ -19,6 +21,7 @@ type InputPort interface {
 	RestoreOrigin(string) (string, error)
 	ShowAll(string) ([]*domain.URL, error)
 	ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error)
+	DeleteBatch(input []string, user string) error
 }
 
 type Shorten struct {
@@ -80,9 +83,22 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 func (s *Shorten) RestoreOrigin(id string) (string, error) {
 	url, err := s.repo.FindByKey(id)
 	if err != nil {
+		// process errors
 		return "", err
 	}
 	return url.Orig, nil
+}
+
+func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
+
+	fmt.Println(user)
+	fmt.Println(delIDs)
+	err := s.repo.BatchDelete(delIDs, user)
+	if err != nil {
+		// process
+		log.Print(err)
+	}
+	return nil
 }
 
 func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
