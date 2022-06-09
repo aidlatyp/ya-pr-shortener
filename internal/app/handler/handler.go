@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -111,7 +110,6 @@ func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Reque
 	}
 
 	go func() {
-		fmt.Println("start batch")
 		err := a.usecase.DeleteBatch(inputCollection, ctxUserID)
 		if err != nil {
 			log.Print(err)

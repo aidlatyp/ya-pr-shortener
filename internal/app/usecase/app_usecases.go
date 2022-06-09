@@ -90,9 +90,6 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 }
 
 func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
-
-	fmt.Println(user)
-	fmt.Println(delIDs)
 	err := s.repo.BatchDelete(delIDs, user)
 	if err != nil {
 		// process
