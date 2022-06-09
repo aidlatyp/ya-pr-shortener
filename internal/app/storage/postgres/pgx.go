@@ -38,10 +38,20 @@ func (d *DB) BatchDelete(urls []string, id string) error {
 	fmt.Println("batch db")
 
 	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
+
 	stmt, err := d.conn.Prepare(query)
-	defer stmt.Close()
+	if err != nil {
+		fmt.Println("error stmt", err)
+	}
+	defer func(stmt *sql.Stmt) {
+		err := stmt.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(stmt)
 
 	if _, err = stmt.Exec(pq.Array(urls), id); err != nil {
+		fmt.Println("batch db -> ", err)
 		return err
 	}
 	return nil

@@ -93,7 +93,7 @@ func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
 	err := s.repo.BatchDelete(delIDs, user)
 	if err != nil {
 		// process
-		log.Print(err)
+		log.Print("error deleting", err)
 	}
 	return nil
 }
