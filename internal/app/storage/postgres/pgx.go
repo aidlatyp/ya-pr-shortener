@@ -192,6 +192,7 @@ func (d *DB) createTablesIfNotExits() {
                                  id TEXT NOT NULL,
                                  orig_url TEXT NOT NULL,
                                  user_id TEXT NOT NULL,
+                                 del  BOOLEAN DEFAULT false NOT NULL,
                                  CONSTRAINT url_constraint PRIMARY KEY (id),
                                  CONSTRAINT orig_url_constraint UNIQUE (user_id, orig_url),
                                  FOREIGN KEY (user_id) REFERENCES public.users (id));`)
