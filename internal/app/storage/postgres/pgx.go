@@ -135,16 +135,26 @@ func (d *DB) Store(url *domain.URL) error {
 
 func (d *DB) FindByKey(key string) (*domain.URL, error) {
 
-	query := `SELECT id,orig_url,user_id FROM public.urls WHERE id = $1;`
+	var isDel bool
+	query := `SELECT id,orig_url,user_id, del FROM public.urls WHERE id = $1;`
+
 	row := d.conn.QueryRow(query, key)
 	url := domain.URL{}
-	err := row.Scan(&url.Short, &url.Orig, &url.Owner)
+	err := row.Scan(&url.Short, &url.Orig, &url.Owner, &isDel)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("key %v not exists", key)
 		}
 		return nil, err
 	}
+
+	if isDel {
+		return nil, usecase.ErrURLDeleted{
+			Err:     errors.New("requested url wad deleted"),
+			ShortID: key,
+		}
+	}
+
 	return &url, nil
 }
 

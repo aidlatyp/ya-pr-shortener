@@ -81,9 +81,12 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 }
 
 func (s *Shorten) RestoreOrigin(id string) (string, error) {
+
 	url, err := s.repo.FindByKey(id)
 	if err != nil {
-		// process errors
+		if errors.As(err, &ErrURLDeleted{}) {
+			return "", err
+		}
 		return "", err
 	}
 	return url.Orig, nil
