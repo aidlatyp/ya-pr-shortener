@@ -38,6 +38,8 @@ func (d *DB) BatchDelete(urls []string, id string) error {
 	fmt.Println("batch db")
 	fmt.Println(id)
 
+	fmt.Println(len(urls))
+
 	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
 
 	stmt, err := d.conn.Prepare(query)
