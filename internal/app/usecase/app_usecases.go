@@ -28,15 +28,28 @@ type InputPort interface {
 }
 
 type Shorten struct {
-	shortener *domain.Shortener
-	repo      Repository
+	shortener    *domain.Shortener
+	repo         Repository
+	deletionChan chan userURLsToDelete
+	buf          []userURLsToDelete
+	timer        *time.Timer
+	isTimeout    bool
 }
 
 func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
 	s := Shorten{
 		shortener: shortener,
 		repo:      repo,
+		// deletion request goes into this channel
+		deletionChan: make(chan userURLsToDelete),
+		// buffer to accumulate delete requests
+		buf: make([]userURLsToDelete, 0, bufLen),
+		// was timeout exceeded from first deletion request
+		isTimeout: true,
+		// timer to count batch time
+		timer: time.NewTimer(0),
 	}
+	// listener for users deletions
 	go s.deletionListener()
 	return &s
 }
@@ -100,59 +113,61 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 	return url.Orig, nil
 }
 
+// Represent separate user request to delete bunch of urls
 type userURLsToDelete struct {
-	UserId string
+	UserID string
 	delIDs []string
 }
 
-var inputChan = make(chan userURLsToDelete, 0)
-var buf = make([]userURLsToDelete, 0, bufLen)
-var timer = time.NewTimer(0 * time.Second)
-var isTimeout = true
-
 func (s *Shorten) flush(delBuf []userURLsToDelete) {
 	for _, v := range delBuf {
-		s.repo.BatchDelete(v.delIDs, v.UserId)
+		s.repo.BatchDelete(v.delIDs, v.UserID)
 	}
 }
 
+//  listener listens for user deletions
 func (s *Shorten) deletionListener() {
 	for {
 		select {
-		case delRequest := <-inputChan:
-			if isTimeout {
-				timer.Reset(time.Second * timeout)
-				isTimeout = false
+
+		// buffer is full flush
+		case delRequest := <-s.deletionChan:
+			if s.isTimeout {
+				s.timer.Reset(time.Second * timeout)
+				s.isTimeout = false
 			}
-			buf = append(buf, delRequest)
-			if len(buf) >= bufLen {
-				cp := make([]userURLsToDelete, len(buf))
-				copy(cp, buf)
-				buf = make([]userURLsToDelete, 0)
+			s.buf = append(s.buf, delRequest)
+			if len(s.buf) >= bufLen {
+				cp := make([]userURLsToDelete, len(s.buf))
+				copy(cp, s.buf)
+				s.buf = make([]userURLsToDelete, 0)
 				go s.flush(cp)
-				timer.Stop()
-				isTimeout = true
+				s.timer.Stop()
+				s.isTimeout = true
 			}
 
-		case <-timer.C:
-			if len(buf) > 0 {
-				cp := make([]userURLsToDelete, len(buf))
-				copy(cp, buf)
-				buf = make([]userURLsToDelete, 0)
+		// timer fired flush
+		case <-s.timer.C:
+			if len(s.buf) > 0 {
+				cp := make([]userURLsToDelete, len(s.buf))
+				copy(cp, s.buf)
+				s.buf = make([]userURLsToDelete, 0)
 				go s.flush(cp)
 			}
-			isTimeout = true
+			s.isTimeout = true
 		}
 	}
 }
 
 func (s *Shorten) DeleteBatch(delIDs []string, user string) {
 	delRequest := userURLsToDelete{
-		UserId: user,
+		UserID: user,
 		delIDs: delIDs,
 	}
+	// send income del requests to [deletionListener]
+	// via channel
 	go func() {
-		inputChan <- delRequest
+		s.deletionChan <- delRequest
 	}()
 }
 

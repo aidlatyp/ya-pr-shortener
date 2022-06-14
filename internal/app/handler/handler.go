@@ -3,7 +3,6 @@ package handler
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -89,8 +88,6 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 }
 
 func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Request) {
-
-	fmt.Println("del req")
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(401)
@@ -113,7 +110,6 @@ func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Reque
 
 	a.usecase.DeleteBatch(inputCollection, ctxUserID)
 	writer.WriteHeader(202)
-
 }
 
 func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
@@ -189,7 +185,6 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 }
 
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
-
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(401)
