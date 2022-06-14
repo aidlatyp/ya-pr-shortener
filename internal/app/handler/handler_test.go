@@ -27,7 +27,6 @@ type usecaseMock struct {
 }
 
 func (u *usecaseMock) Shorten(_ string, _ string) (string, error) {
-
 	return u.s, nil
 }
 func (u *usecaseMock) RestoreOrigin(string) (string, error) {
@@ -42,10 +41,7 @@ func (u *usecaseMock) ShowAll(string) ([]*domain.URL, error) {
 func (u *usecaseMock) ShortenBatch([]usecase.Correlation, string) ([]usecase.OutputBatchItem, error) {
 	return nil, nil
 }
-
-func (u *usecaseMock) DeleteBatch([]string, string) error {
-	return nil
-}
+func (u *usecaseMock) DeleteBatch([]string, string) {}
 
 func TestAppHandler_HandleMain(t *testing.T) {
 	t.Run("Test Handler", func(t *testing.T) {

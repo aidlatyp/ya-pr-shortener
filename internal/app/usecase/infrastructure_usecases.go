@@ -18,7 +18,7 @@ func (l *Liveliness) Do() error {
 	err := l.service.Ping()
 	if err != nil {
 		// figure out what to do with error
-		// process somehow
+		// deletionListener somehow
 		return err
 	}
 	return nil

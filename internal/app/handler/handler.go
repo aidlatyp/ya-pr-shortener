@@ -91,7 +91,6 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Request) {
 
 	fmt.Println("del req")
-	log.Println("deletion req ")
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(401)
@@ -112,15 +111,7 @@ func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Reque
 		return
 	}
 
-	go func() {
-		fmt.Println("start delete")
-		err := a.usecase.DeleteBatch(inputCollection, ctxUserID)
-		if err != nil {
-			log.Print(err)
-		}
-		fmt.Println("end del")
-	}()
-
+	a.usecase.DeleteBatch(inputCollection, ctxUserID)
 	writer.WriteHeader(202)
 
 }

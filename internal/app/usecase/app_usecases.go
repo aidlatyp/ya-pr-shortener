@@ -3,10 +3,13 @@ package usecase
 import (
 	"errors"
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 )
+
+const bufLen = 3
+const timeout = 5
 
 type Repository interface {
 	Store(*domain.URL) error
@@ -21,7 +24,7 @@ type InputPort interface {
 	RestoreOrigin(string) (string, error)
 	ShowAll(string) ([]*domain.URL, error)
 	ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error)
-	DeleteBatch(input []string, user string) error
+	DeleteBatch(input []string, user string)
 }
 
 type Shorten struct {
@@ -30,10 +33,12 @@ type Shorten struct {
 }
 
 func NewShorten(shortener *domain.Shortener, repo Repository) *Shorten {
-	return &Shorten{
+	s := Shorten{
 		shortener: shortener,
 		repo:      repo,
 	}
+	go s.deletionListener()
+	return &s
 }
 
 func (s *Shorten) ShortenBatch(input []Correlation, user string) ([]OutputBatchItem, error) {
@@ -73,9 +78,8 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 
 	err := s.repo.Store(short)
 	if err != nil {
-
 		if errors.As(err, &ErrAlreadyExists{}) {
-			// process error at this layer if needed
+			// deletionListener error at this layer if needed
 			// i.e set user-friendly message
 			return "", err
 		}
@@ -84,11 +88,10 @@ func (s *Shorten) Shorten(url string, userID string) (string, error) {
 }
 
 func (s *Shorten) RestoreOrigin(id string) (string, error) {
-
 	url, err := s.repo.FindByKey(id)
 	if err != nil {
 		if errors.As(err, &ErrURLDeleted{}) {
-			// process error at this layer if needed
+			// deletionListener error at this layer if needed
 			// i.e set user-friendly message
 			return "", err
 		}
@@ -97,21 +100,66 @@ func (s *Shorten) RestoreOrigin(id string) (string, error) {
 	return url.Orig, nil
 }
 
-func (s *Shorten) DeleteBatch(delIDs []string, user string) error {
-	fmt.Println("usecase del")
-	err := s.repo.BatchDelete(delIDs, user)
-	if err != nil {
-		// process error at this layer if needed
-		// i.e set user-friendly message
-		log.Print("error deleting", err)
+type userURLsToDelete struct {
+	UserId string
+	delIDs []string
+}
+
+var inputChan = make(chan userURLsToDelete, 0)
+var buf = make([]userURLsToDelete, 0, bufLen)
+var timer = time.NewTimer(0 * time.Second)
+var isTimeout = true
+
+func (s *Shorten) flush(delBuf []userURLsToDelete) {
+	for _, v := range delBuf {
+		s.repo.BatchDelete(v.delIDs, v.UserId)
 	}
-	return nil
+}
+
+func (s *Shorten) deletionListener() {
+	for {
+		select {
+		case delRequest := <-inputChan:
+			if isTimeout {
+				timer.Reset(time.Second * timeout)
+				isTimeout = false
+			}
+			buf = append(buf, delRequest)
+			if len(buf) >= bufLen {
+				cp := make([]userURLsToDelete, len(buf))
+				copy(cp, buf)
+				buf = make([]userURLsToDelete, 0)
+				go s.flush(cp)
+				timer.Stop()
+				isTimeout = true
+			}
+
+		case <-timer.C:
+			if len(buf) > 0 {
+				cp := make([]userURLsToDelete, len(buf))
+				copy(cp, buf)
+				buf = make([]userURLsToDelete, 0)
+				go s.flush(cp)
+			}
+			isTimeout = true
+		}
+	}
+}
+
+func (s *Shorten) DeleteBatch(delIDs []string, user string) {
+	delRequest := userURLsToDelete{
+		UserId: user,
+		delIDs: delIDs,
+	}
+	go func() {
+		inputChan <- delRequest
+	}()
 }
 
 func (s *Shorten) ShowAll(user string) ([]*domain.URL, error) {
 	list := s.repo.FindAll(user)
 	if list == nil || len(list) < 1 {
-		// process error at this layer if needed
+		// deletionListener error at this layer if needed
 		// i.e set user-friendly message
 		return nil, fmt.Errorf("seems you %v do not have any shortened links yet", user)
 	}
