@@ -10,6 +10,7 @@ import (
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/domain"
 	"github.com/aidlatyp/ya-pr-shortener/internal/app/usecase"
 	_ "github.com/jackc/pgx/v4/stdlib"
+	"github.com/lib/pq"
 )
 
 type DB struct {
@@ -20,7 +21,6 @@ func NewDB(dsn string) (*DB, error) {
 	if dsn == "" {
 		return nil, errors.New("invalid connection string")
 	}
-
 	conn, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, err
@@ -30,6 +30,27 @@ func NewDB(dsn string) (*DB, error) {
 	db.createTablesIfNotExits()
 
 	return &db, nil
+}
+
+func (d *DB) BatchDelete(urls []string, id string) error {
+
+	query := `UPDATE public.urls SET del = true WHERE id = any ($1) AND user_id=$2;`
+
+	stmt, err := d.conn.Prepare(query)
+	if err != nil {
+		return fmt.Errorf("error while prepare stmt: %v", err)
+	}
+	defer func(stmt *sql.Stmt) {
+		err := stmt.Close()
+		if err != nil {
+			log.Println(err)
+		}
+	}(stmt)
+
+	if _, err = stmt.Exec(pq.Array(urls), id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (d *DB) BatchWrite(uris []domain.URL) error {
@@ -107,15 +128,24 @@ func (d *DB) Store(url *domain.URL) error {
 
 func (d *DB) FindByKey(key string) (*domain.URL, error) {
 
-	query := `SELECT id,orig_url,user_id FROM public.urls WHERE id = $1;`
+	var isDel bool
+	query := `SELECT id,orig_url,user_id, del FROM public.urls WHERE id = $1;`
+
 	row := d.conn.QueryRow(query, key)
 	url := domain.URL{}
-	err := row.Scan(&url.Short, &url.Orig, &url.Owner)
+	err := row.Scan(&url.Short, &url.Orig, &url.Owner, &isDel)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("key %v not exists", key)
 		}
 		return nil, err
+	}
+
+	if isDel {
+		return nil, usecase.ErrURLDeleted{
+			Err:     errors.New("requested url wad deleted"),
+			ShortID: key,
+		}
 	}
 	return &url, nil
 }
@@ -167,6 +197,7 @@ func (d *DB) createTablesIfNotExits() {
                                  id TEXT NOT NULL,
                                  orig_url TEXT NOT NULL,
                                  user_id TEXT NOT NULL,
+                                 del  BOOLEAN DEFAULT false NOT NULL,
                                  CONSTRAINT url_constraint PRIMARY KEY (id),
                                  CONSTRAINT orig_url_constraint UNIQUE (user_id, orig_url),
                                  FOREIGN KEY (user_id) REFERENCES public.users (id));`)

@@ -65,6 +65,7 @@ func (a *AppRouter) apiRouter() {
 	apiRouter.Post("/api/shorten", a.handleShorten)
 	apiRouter.Get("/api/user/urls", a.handleUserURLs)
 	apiRouter.Post("/api/shorten/batch", a.handleBatch)
+	apiRouter.Delete("/api/user/urls", a.handleDelete)
 
 	// Mount sub router
 	a.Mount("/", apiRouter)
@@ -72,7 +73,6 @@ func (a *AppRouter) apiRouter() {
 
 // infraRouter is a sub router which serve infrastructure endpoints
 func (a *AppRouter) infraRouter() {
-
 	infraRouter := chi.NewRouter()
 	infraRouter.Get("/", a.handlePing)
 	// Mount sub router
@@ -85,6 +85,31 @@ func (a *AppRouter) handlePing(writer http.ResponseWriter, _ *http.Request) {
 		writer.WriteHeader(500)
 	}
 	writer.WriteHeader(200)
+}
+
+func (a *AppRouter) handleDelete(writer http.ResponseWriter, request *http.Request) {
+	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
+	if !ok {
+		writer.WriteHeader(401)
+		return
+	}
+
+	inputBytes, err := io.ReadAll(request.Body)
+	if err != nil {
+		writer.WriteHeader(400)
+		return
+	}
+
+	inputCollection := make([]string, 0)
+	err = json.Unmarshal(inputBytes, &inputCollection)
+	if err != nil {
+		log.Printf("cant unmarshal due to %v", err)
+		writer.WriteHeader(400)
+		return
+	}
+
+	a.usecase.DeleteBatch(inputCollection, ctxUserID)
+	writer.WriteHeader(202)
 }
 
 func (a *AppRouter) handleBatch(writer http.ResponseWriter, request *http.Request) {
@@ -160,7 +185,6 @@ func (a *AppRouter) handleUserURLs(writer http.ResponseWriter, request *http.Req
 }
 
 func (a *AppRouter) handleShorten(writer http.ResponseWriter, request *http.Request) {
-
 	ctxUserID, ok := request.Context().Value(appMiddle.UserIDCtxKey).(string)
 	if !ok {
 		writer.WriteHeader(401)
@@ -223,6 +247,11 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 	id := chi.URLParam(request, "id")
 	response, err := a.usecase.RestoreOrigin(id)
 	if err != nil {
+
+		if errors.As(err, &usecase.ErrURLDeleted{}) {
+			writer.WriteHeader(410)
+			return
+		}
 		writer.WriteHeader(404)
 		return
 	}
@@ -232,9 +261,7 @@ func (a *AppRouter) handleGet(writer http.ResponseWriter, request *http.Request)
 }
 
 func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request) {
-
 	ctxUserID, _ := request.Context().Value(appMiddle.UserIDCtxKey).(string)
-
 	input, err := io.ReadAll(request.Body)
 	if err != nil || len(input) < minURLlen {
 		writer.WriteHeader(400)
@@ -254,6 +281,8 @@ func (a *AppRouter) handlePost(writer http.ResponseWriter, request *http.Request
 			}
 			return
 		}
+		writer.WriteHeader(500)
+		return
 	}
 
 	writer.Header().Set("Content-Type", "text/plain")

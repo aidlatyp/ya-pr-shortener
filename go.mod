@@ -6,6 +6,7 @@ require (
 	github.com/caarlos0/env/v6 v6.9.1
 	github.com/go-chi/chi v1.5.4
 	github.com/jackc/pgx/v4 v4.16.1
+	github.com/lib/pq v1.10.2
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.7.1
 )

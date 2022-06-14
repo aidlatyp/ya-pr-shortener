@@ -89,3 +89,7 @@ func (p *PersistentStorage) BatchWrite(urls []domain.URL) error {
 func (p *PersistentStorage) Close() error {
 	return p.file.Close()
 }
+
+func (p *PersistentStorage) BatchDelete([]string, string) error {
+	return p.cache.BatchDelete([]string{}, "")
+}
